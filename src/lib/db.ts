@@ -2,9 +2,10 @@ import { createClient } from "@libsql/client";
 import { STARTUPS, totalRevenue } from "@/data/startups";
 import { LISTINGS } from "@/data/listings";
 
-// Local SQLite database file in the project directory
+// SQLite database: connects to Turso (cloud) if env vars are present, or falls back to local SQLite file
 const client = createClient({
-  url: "file:trustledger.db",
+  url: process.env.TURSO_DATABASE_URL || "file:trustledger.db",
+  authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
 let isInitialized = false;

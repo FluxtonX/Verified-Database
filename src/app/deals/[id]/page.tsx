@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { Suspense, use, useEffect, useState } from "react";
 import Link from "next/link";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
@@ -29,6 +29,23 @@ const STAGES = [
 ];
 
 export default function DealClosingRoomPage({ params }: PageProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-emerald-500 border-r-transparent mb-4"></div>
+            <p className="text-sm">Loading closing room...</p>
+          </div>
+        </div>
+      }
+    >
+      <DealClosingRoomContent params={params} />
+    </Suspense>
+  );
+}
+
+function DealClosingRoomContent({ params }: PageProps) {
   const { id } = use(params);
 
   const [storedDeals, setStoredDeals] = useStored<Deal>(DEALS_KEY, []);
