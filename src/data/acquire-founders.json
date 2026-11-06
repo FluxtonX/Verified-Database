@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Jonathan Geiger",
+    "handle": "JonathanGeige18",
+    "avatar": "/assets/acquire-founder-0.jpg",
+    "image": ""
+  },
+  {
+    "name": "David",
+    "handle": "deivcodes",
+    "avatar": "/assets/acquire-founder-1.jpg",
+    "image": "/assets/acquire-sale-1.jpg"
+  },
+  {
+    "name": "Mankaff",
+    "handle": "mankaff_",
+    "avatar": "/assets/acquire-founder-2.jpg",
+    "image": "/assets/acquire-sale-2.jpg"
+  },
+  {
+    "name": "Marc Lou",
+    "handle": "marclou",
+    "avatar": "/assets/acquire-founder-3.jpg",
+    "image": "/assets/acquire-sale-3.jpg"
+  }
+]

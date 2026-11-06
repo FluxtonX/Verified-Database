@@ -1,23 +1,19 @@
-# Fluxtonx — TrustLedger Platform
+# VerifedDB
 
-Next-generation SaaS Verification and Acquisition Platform with Four-Tier Verification Protocol.
+A hardcoded recreation of the logged-out TrustMRR homepage, branded as VerifedDB.
 
-## Tech Stack
-- **Frontend:** Next.js 16 (App Router, React 19, TypeScript)
-- **Styling:** Custom Vanilla CSS Design System with responsive layouts, glassmorphism, and telemetry animations
-- **Backend:** Node.js Verification & Financial Consensus Engine (`backend/`)
+## Development
 
-## Getting Started
-
-### Development Server
-Run the local dev server:
-```bash
+```sh
+npm install
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-### Production Build
-```bash
+Open http://localhost:3000.
+
+```sh
 npm run build
-npm run start
+npm start
 ```
+
+The homepage includes fixed desktop sponsor columns, horizontally scrollable startup cards, a 50-startup leaderboard, and the activity feed. Content and visual assets are stored locally in `src/data` and `public/assets`. Search filters the hardcoded leaderboard. Accounts, payments, startup submissions, and other pages are outside this first design step.

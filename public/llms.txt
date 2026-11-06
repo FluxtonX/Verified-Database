@@ -1,0 +1,9 @@
+# VerifedDB
+
+VerifedDB is a startup marketplace interface with hardcoded demonstration data.
+
+- Homepage: /
+- Marketplace: /acquire
+- Login: /login
+
+Authentication, startup submissions, payments, and live revenue verification are not connected in this UI prototype.

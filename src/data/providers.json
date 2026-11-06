@@ -1,0 +1,46 @@
+[
+  {
+    "name": "Stripe",
+    "logo": "/assets/provider-0.webp"
+  },
+  {
+    "name": "LemonSqueezy",
+    "logo": "/assets/provider-1.webp"
+  },
+  {
+    "name": "Polar",
+    "logo": "/assets/provider-2.webp"
+  },
+  {
+    "name": "DodoPayment",
+    "logo": "/assets/provider-3.webp"
+  },
+  {
+    "name": "Paddle",
+    "logo": "/assets/provider-4.webp"
+  },
+  {
+    "name": "RevenueCat",
+    "logo": "/assets/provider-5.webp"
+  },
+  {
+    "name": "Superwall",
+    "logo": "/assets/provider-6.webp"
+  },
+  {
+    "name": "App Store",
+    "logo": "/assets/provider-7.svg"
+  },
+  {
+    "name": "Creem",
+    "logo": "/assets/provider-8.webp"
+  },
+  {
+    "name": "Whop",
+    "logo": "/assets/provider-9.webp"
+  },
+  {
+    "name": "Razorpay",
+    "logo": "/assets/provider-10.webp"
+  }
+]
