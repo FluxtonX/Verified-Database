@@ -2,14 +2,19 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import Link from "next/link";
+import { saveStartup } from "@/app/catalog-actions";
+import { useActionState, useEffect, useRef, useState, type RefObject } from "react";
 import { Icon } from "./icons";
 
-function Toggle({ label, info }: { label: string; info?: string }) {
-  const [checked, setChecked] = useState(false);
+function Toggle({ label, name, info, initial = false }: {
+  label: string; name: string; info?: string; initial?: boolean;
+}) {
+  const [checked, setChecked] = useState(initial);
 
   return (
     <div className="startup-toggle-row">
+      {checked && <input type="hidden" name={name} value="on" />}
       <button
         type="button"
         role="switch"
@@ -33,12 +38,20 @@ function Toggle({ label, info }: { label: string; info?: string }) {
   );
 }
 
-export default function AddStartupModal({ onClose, triggerRef }: {
+export default function AddStartupModal({ onClose, triggerRef, signedIn, categories, next, configured }: {
+  signedIn: boolean;
+  categories: string[];
+  next: string;
+  configured: boolean;
   onClose: () => void;
   triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
+  const [name, setName] = useState("");
+  const [website, setWebsite] = useState("");
+  const [handle, setHandle] = useState("");
+  const [category, setCategory] = useState("");
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const provider = "Stripe";
+  const [result, action, pending] = useActionState(saveStartup, {});
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
   const addons = [
     {
@@ -63,15 +76,16 @@ export default function AddStartupModal({ onClose, triggerRef }: {
 
   useEffect(() => {
     const dialog = dialogRef.current;
+    const trigger = triggerRef.current;
     const previousOverflow = document.body.style.overflow;
     dialog?.showModal();
-    dialog?.querySelector<HTMLInputElement>("#startup-api-key")?.focus({ preventScroll: true });
+    dialog?.querySelector<HTMLInputElement>("#startup-name")?.focus({ preventScroll: true });
     document.body.style.overflow = "hidden";
 
     return () => {
       dialog?.close();
       document.body.style.overflow = previousOverflow;
-      triggerRef.current?.focus({ preventScroll: true });
+      trigger?.focus({ preventScroll: true });
     };
   }, [triggerRef]);
 
@@ -92,53 +106,51 @@ export default function AddStartupModal({ onClose, triggerRef }: {
       <header className="startup-dialog-header">
         <div className="startup-title-row">
           <h2 id="add-startup-title">Add your startup</h2>
-          <span className="startup-visitors"><span className="visitor-dot" /><strong>13,393</strong> visitors today</span>
         </div>
-        <p id="add-startup-description">Showcase your revenue to <strong>200K monthly visitors</strong>. It&apos;s free!</p>
+        <p id="add-startup-description">Save a private draft to get started.</p>
         <button type="button" className="startup-close" onClick={onClose} aria-label="Close add startup dialog"><Icon name="close" size={20} /></button>
       </header>
 
-      <form className="startup-form" onSubmit={event => event.preventDefault()}>
+      {!signedIn ? <div className="startup-dialog-body">
+        <p>{configured ? "Sign in to save your startup draft." : "Startup drafts will be available once Supabase is configured."}</p>
+        {configured && <Link className="marketplace-account-link" href={`/login?next=${encodeURIComponent(next)}`}>Continue to login</Link>}
+      </div> : result.saved ? <div className="startup-dialog-body">
+        <p role="status">Draft saved. Your startup stays private while revenue verification is pending.</p>
+        <button type="button" className="startup-submit" onClick={onClose}>Done</button>
+      </div> : <form className="startup-form" action={action}>
         <div className="startup-dialog-body">
-          <div className="startup-provider-field">
-            <label htmlFor="startup-provider">Choose your payment provider</label>
-            <div className="startup-provider-select">
-              <span className="provider-mark" aria-hidden="true">{provider === "Stripe" ? "S" : provider[0]}</span>
-              <select id="startup-provider" defaultValue={provider}>
-                <option>Stripe</option>
+          <div className="startup-draft-fields">
+            <label htmlFor="startup-name">Startup name</label>
+            <input id="startup-name" name="name" type="text" value={name} onChange={event => setName(event.target.value)} maxLength={100} required autoFocus />
+            <label htmlFor="startup-website">Website</label>
+            <input id="startup-website" name="website" type="url" value={website} onChange={event => setWebsite(event.target.value)} placeholder="https://example.com" maxLength={2048} required />
+            <label htmlFor="startup-category">Category</label>
+            <div className="startup-provider-select startup-category-select">
+              <select id="startup-category" name="category" value={category} onChange={event => setCategory(event.target.value)} required>
+                <option value="" disabled>Select a category</option>
+                {categories.map(category => <option key={category}>{category}</option>)}
               </select>
-              <svg className="provider-chevrons" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4.5 6 3.5-3.5L11.5 6m-7 4L8 13.5l3.5-3.5" /></svg>
             </div>
           </div>
 
-          <div className="startup-key-field">
-            <label htmlFor="startup-api-key">1. {provider} API key</label>
-            <input id="startup-api-key" name="api-key" type="text" placeholder="rk_live_..." autoComplete="off" spellCheck={false} required autoFocus />
-            <a className="startup-key-help" href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer">
-              <div>
-                <p>Click here to create a read-only API key.</p>
-                <ol>
-                  <li>Scroll down and click &apos;Create key&apos;</li>
-                  <li>Don&apos;t change the permissions</li>
-                  <li>Don&apos;t delete the key or we can&apos;t refresh revenue</li>
-                </ol>
-              </div>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 3h7v7m0-7L10 14m0-9H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5" /></svg>
-            </a>
+          <div className="startup-provider-field">
+            <p>Payment provider <strong>Stripe</strong></p>
+            <p>Connect Stripe after revenue verification is available.</p>
           </div>
 
           <div className="startup-handle-field">
-            <label htmlFor="startup-x-handle">2. 𝕏 handle (optional)</label>
-            <input id="startup-x-handle" name="x-handle" type="text" placeholder="username" autoComplete="off" spellCheck={false} />
+            <label htmlFor="startup-x-handle">𝕏 handle (optional)</label>
+            <input id="startup-x-handle" name="x-handle" type="text" value={handle} onChange={event => setHandle(event.target.value)} placeholder="username" autoComplete="off" spellCheck={false} />
           </div>
 
-          <Toggle label="Anonymous mode" info="Hide your startup’s name and details on the public leaderboard." />
+          <Toggle name="anonymous" label="Anonymous mode" info="Hide your startup’s name and details on the public leaderboard." />
 
           <div className="startup-addons" aria-label="Optional startup add-ons">
+            <p>Save your add-on interests for later.</p>
             {addons.map(addon => (
               <label className="startup-addon" key={addon.id}>
                 <input
-                  type="checkbox"
+                  type="checkbox" name="addon" value={addon.id}
                   checked={selectedAddons.includes(addon.id)}
                   onChange={event => setSelectedAddons(current =>
                     event.target.checked ? [...current, addon.id] : current.filter(id => id !== addon.id)
@@ -166,14 +178,14 @@ export default function AddStartupModal({ onClose, triggerRef }: {
             <div className="startup-testimonial-dots" aria-hidden="true"><span /><span /><span className="active" /><span /></div>
           </figure>
 
-          <p className="startup-terms">By adding your startup, you agree to our <span>Terms of Service</span>.</p>
+          {result.error && <p role="alert">{result.error}</p>}
         </div>
 
         <div className="startup-dialog-footer">
-          <Toggle label="List for sale" />
-          <button type="submit" className="startup-submit" disabled>Add startup</button>
+          <Toggle name="wants-sale" label="List for sale" initial={next.startsWith("/acquire")} />
+          <button type="submit" className="startup-submit" disabled={pending || !categories.length}>{pending ? "Saving…" : "Save draft"}</button>
         </div>
-      </form>
+      </form>}
     </dialog>
   );
 }

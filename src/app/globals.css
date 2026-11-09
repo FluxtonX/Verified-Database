@@ -116,7 +116,7 @@ footer{text-align:center;padding:64px 0 8px;color:var(--muted)}footer h2{font-si
 .provider-mark { position: absolute; left: 12px; top: 13px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 6px; background: #635bff; color: #fff; font-family: Arial, sans-serif; font-size: 14px; font-weight: 800; pointer-events: none; }
 .provider-chevrons { position: absolute; right: 14px; top: 14px; color: #858585; pointer-events: none; }
 .startup-provider-field { margin-bottom: 24px; }
-.startup-dialog-body input[type="text"] { width: 100%; height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff; box-shadow: 0 1px 2px #0000000d; font-size: 14px; color: var(--foreground); }
+.startup-dialog-body :is(input[type="text"], input[type="url"]) { width: 100%; height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff; box-shadow: 0 1px 2px #0000000d; font-size: 14px; color: var(--foreground); }
 .startup-dialog-body input[type="text"]::placeholder { color: var(--muted); opacity: 1; }
 .startup-dialog-body input[type="text"]:focus { border-color: #a3a3a3; outline: 3px solid #d1d1d1; outline-offset: 0; }
 .startup-key-help { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: #fafafa; font-size: 14px; line-height: 20px; }
@@ -377,3 +377,9 @@ footer{text-align:center;padding:64px 0 8px;color:var(--muted)}footer h2{font-si
 .marketplace-country .marketplace-select::before { content: '−'; position: absolute; display: grid; place-items: center; left: 12px; top: 12px; width: 30px; height: 24px; border: 1px solid var(--border); border-radius: 4px; background: #f5f5f5; color: var(--muted); font-size: 14px; pointer-events: none; }
 .marketplace-country .marketplace-select::after { display: none; }
 .marketplace-country select { height: 50px; padding-left: 56px; padding-right: 8px; font-size: 14px; color: var(--foreground); box-shadow: none; border-radius: 10px; }
+
+.login-secondary-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.login-secondary-actions button { font-size: 13px; text-decoration: underline; }
+
+.startup-draft-fields { display: grid; gap: 8px; margin-bottom: 24px; }
+.startup-category-select select { padding: 0 12px; appearance: auto; }
