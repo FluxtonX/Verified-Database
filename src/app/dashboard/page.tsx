@@ -1,462 +1,195 @@
-"use client";
+/* eslint-disable @next/next/no-img-element */
 
-import { useState, useEffect } from "react";
+import type { Metadata } from "next";
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
-import SiteHeader from "@/components/SiteHeader";
-import SiteFooter from "@/components/SiteFooter";
-import RevenueBar from "@/components/RevenueBar";
-import { formatMoney, totalRevenue } from "@/data/startups";
-import {
-  useStored,
-  MY_STARTUPS_KEY,
-  OFFERS_KEY,
-  SAVED_KEY,
-  DEFAULT_MY_STARTUPS,
-  DEFAULT_OFFERS,
-  type UserStartup,
-  type Offer,
-} from "@/lib/storage";
-import { LISTINGS } from "@/data/listings";
+import { redirect } from "next/navigation";
+import DashboardAddStartup from "@/components/DashboardAddStartup";
+import StartupDetailsForm, { type StartupDetails } from "@/components/StartupDetailsForm";
+import StartupLogo from "@/components/StartupLogo";
+import { createSupabase } from "@/lib/supabase/server";
+import { signOut } from "@/app/login/actions";
+import { Icon, type IconName } from "@/components/icons";
+import DashboardModeSwitch from "@/components/DashboardModeSwitch";
+import { InterestedBuyers, SellerInbox } from "@/components/SellerInbox";
+import { SaleRequest, SellerFeedback, SellerProfileForm, SellerSettings, SellerSocials } from "@/components/SellerDashboardForms";
+import { sellerTabs, sellerUrl, type DashboardMode, type SellerTab, type SellerLead, type SellerMessage, type SellerProfile } from "@/lib/seller-dashboard";
+import { startupDetailsColumns } from "@/lib/startup-details";
+import { providerNames, type PaymentSource } from "@/lib/startup-metrics";
+import { importedLogoUrl, startupLogoBucket, startupLogoPath } from "@/lib/startup-logo";
 
-const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
+export const metadata: Metadata = { title: "Dashboard | VerifedDB" };
 
-export default function DashboardPage() {
-  const [startups, setStartups] = useStored<UserStartup>(MY_STARTUPS_KEY, DEFAULT_MY_STARTUPS);
-  const [allOffers, setAllOffers] = useStored<Offer>(OFFERS_KEY, DEFAULT_OFFERS);
-  const [savedIds, setSavedIds] = useStored<string>(SAVED_KEY);
+type Draft = StartupDetails & { startup_payment_sources: PaymentSource[]; wants_sale: boolean };
 
-  const [activeTab, setActiveTab] = useState<"startups" | "received" | "sent" | "saved">("startups");
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
+type Supabase = NonNullable<Awaited<ReturnType<typeof createSupabase>>>;
+const links: { tab: SellerTab; name: string; icon: IconName }[] = [
+  { tab: "chat", name: "Inbox", icon: "inbox" },
+  { tab: "interested", name: "Interested", icon: "heart" },
+  { tab: "my-startups", name: "My startups", icon: "building" },
+  { tab: "my-profile", name: "My profile", icon: "profile" },
+  { tab: "settings", name: "Settings", icon: "settings" },
+  { tab: "feedback", name: "Feedback", icon: "bulb" },
+];
 
-  const showToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3500);
-  };
+type DashboardParams = { startup?: string; mode?: string; tab?: string; thread?: string; folder?: string; filter?: string };
 
-  // Sync with real backend SQLite API on mount
-  useEffect(() => {
-    async function loadBackendData() {
-      try {
-        const [startupsRes, offersRes] = await Promise.all([
-          fetch("/api/startups"),
-          fetch("/api/offers"),
-        ]);
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<DashboardParams> }) {
+  const [supabase, params] = await Promise.all([createSupabase(), searchParams]);
+  const session = await supabase?.auth.getClaims();
+  const claims = session?.data?.claims;
+  if (!supabase || !claims?.sub) redirect("/login?next=%2Fdashboard");
 
-        if (startupsRes.ok) {
-          const { startups: serverStartups } = await startupsRes.json();
-          // Filter to user-created startups (ones starting with usr-)
-          const userOnly = serverStartups.filter((s: any) => s.id.startsWith("usr-"));
-          if (userOnly.length > 0) {
-            setStartups(userOnly);
-          }
-        }
+  const mode: DashboardMode = params.mode === "buyer" && !params.startup ? "buyer" : "seller";
+  const tab = sellerTabs.find(item => item === params.tab) ?? "my-startups";
+  const email = typeof claims.email === "string" ? claims.email : "";
+  return <div className="seller-dashboard">
+    <aside className="dashboard-sidebar">
+      <div className="dashboard-sidebar-top">
+        <Link href="/" className="dashboard-brand"><img src="/assets/reference-0.webp" width="22" height="22" alt="" />VerifedDB</Link>
+        <DashboardModeSwitch mode={mode} />
+      </div>
+      <nav aria-label="Dashboard">
+        {mode === "seller" ? links.map(link => <Link key={link.tab} href={sellerUrl(link.tab)} aria-current={tab === link.tab ? "page" : undefined}>
+          <Icon name={link.icon} size={17} />{link.name}
+        </Link>) : <Link href="/acquire"><Icon name="search" size={17} />Marketplace</Link>}
+      </nav>
+      <div className="dashboard-sidebar-account"><div>
+        <small>Signed in as</small>
+        <p title={email}>{email || "VerifedDB member"}</p>
+        <form action={signOut}><button className="seller-button" type="submit"><Icon name="logout" size={16} />Log out</button></form>
+      </div></div>
+    </aside>
+    <main className="dashboard-main">
+      {mode === "buyer" ? <section className="seller-section seller-narrow">
+        <h1>Buyer dashboard</h1><div className="seller-card"><h2>Browse startups</h2><p className="muted">Explore available listings in the marketplace.</p>
+          <Link className="startup-submit" href="/acquire">Browse marketplace</Link></div>
+      </section> : <SellerContent supabase={supabase} owner={claims.sub} tab={tab} params={params} email={email} />}
+    </main>
+  </div>;
+}
 
-        if (offersRes.ok) {
-          const { offers: serverOffers } = await offersRes.json();
-          if (serverOffers && serverOffers.length > 0) {
-            setAllOffers(serverOffers);
-          }
-        }
-      } catch (e) {
-        console.warn("Operating with local storage state:", e);
+async function SellerContent({ supabase, owner, tab, params, email }: {
+  supabase: Supabase; owner: string; tab: SellerTab; params: DashboardParams; email: string;
+}) {
+  switch (tab) {
+    case "chat":
+    case "interested": {
+      const archived = params.folder === "archive";
+      const needsReply = params.filter === "reply";
+      const base = supabase.from("seller_leads").select("id,buyer_name,startup_name,created_at,last_message_at,last_sender,archived");
+      const list = tab === "interested" ? base.is("last_message_at", null).eq("archived", false).order("created_at", { ascending: false })
+        : base.not("last_message_at", "is", null).eq("archived", archived).order("last_message_at", { ascending: false });
+      if (tab === "chat" && needsReply) list.eq("last_sender", "buyer");
+      const { data, error } = await list.limit(100).returns<SellerLead[]>();
+      const leads = data ?? [];
+      if (tab === "interested") return <InterestedBuyers leads={leads} failed={Boolean(error)} />;
+      const threadId = params.thread;
+      let thread = leads.find(lead => lead.id === threadId);
+      if (!thread && threadId && /^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/i.test(threadId)) {
+        const selected = await supabase.from("seller_leads").select("id,buyer_name,startup_name,created_at,last_message_at,last_sender,archived").eq("id", threadId).maybeSingle<SellerLead>();
+        thread = selected.data ?? undefined;
       }
+      const [conversation, settings] = await Promise.all([
+        thread ? supabase.from("seller_lead_messages").select("id,sender,body,created_at").eq("lead_id", thread.id)
+          .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(100).returns<SellerMessage[]>() : null,
+        thread ? supabase.from("profiles").select("timezone").eq("id", owner).maybeSingle<{ timezone: string }>() : null,
+      ]);
+      return <SellerInbox leads={leads} thread={thread} messages={conversation?.data?.reverse() ?? []}
+        timezone={settings?.data?.timezone ?? "UTC"} archived={archived} needsReply={needsReply} failed={Boolean(error || conversation?.error)} />;
     }
-    loadBackendData();
-  }, []);
-
-  // Filter offers received vs sent
-  const offersReceived = allOffers.filter((o) => o.isReceived || startups.some((s) => s.id === o.listingId));
-  const offersSent = allOffers.filter((o) => !o.isReceived && !startups.some((s) => s.id === o.listingId));
-
-  // Saved listings from public marketplace
-  const savedListings = LISTINGS.filter((l) => savedIds.includes(l.id));
-
-  const updateOfferStatus = async (offerId: string, newStatus: "accepted" | "declined") => {
-    const updated = allOffers.map((o) => (o.id === offerId ? { ...o, status: newStatus } : o));
-    setAllOffers(updated);
-    showToast(`Offer marked as ${newStatus}! Buyer will be notified.`);
-
-    try {
-      await fetch(`/api/offers/${offerId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-    } catch (e) {
-      console.warn("Failed to patch offer on server:", e);
+    case "my-profile":
+    case "settings": {
+      const [{ data: profile, error }, auth] = await Promise.all([
+        supabase.from("profiles").select("display_name,avatar_url,x_handle,bio,linkedin_url,notify_messages,notify_saved,timezone,deletion_requested_at").eq("id", owner).maybeSingle<SellerProfile>(),
+        tab === "my-profile" ? supabase.auth.getUser() : null,
+      ]);
+      if (error) return <p className="seller-section" role="alert">Couldn’t load your account settings. Refresh to try again.</p>;
+      if (tab === "settings") return <section className="seller-section seller-narrow">
+        <h1>Settings</h1><p className="seller-description">Manage your account preferences and notifications.</p>
+        <div className="seller-stack"><SellerSettings email={email} profile={profile} /></div>
+      </section>;
+      const emailVerified = Boolean(auth?.data.user?.email_confirmed_at);
+      return <section className="seller-section seller-profile-page seller-stack" aria-label="My profile">
+        <div className="seller-notice"><Icon name="shield" size={22} /><div><h2>Account verification</h2>
+          <p>{emailVerified ? "Your email address is verified." : "Confirm your email address to verify account access."}</p></div>
+          {emailVerified && <span className="seller-verification-badge"><Icon name="check" size={15} />Email verified</span>}
+        </div>
+        <SellerProfileForm profile={profile} /><SellerSocials profile={profile} />
+      </section>;
     }
-  };
-
-  const toggleStartupForSale = async (id: string) => {
-    const target = startups.find((s) => s.id === id);
-    const nextStatus = target ? !target.isForSale : false;
-    const updated = startups.map((s) => (s.id === id ? { ...s, isForSale: nextStatus } : s));
-    setStartups(updated);
-    showToast("Listing status updated!");
-
-    try {
-      await fetch(`/api/startups/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isForSale: nextStatus }),
-      });
-    } catch (e) {
-      console.warn("Failed to patch startup on server:", e);
+    case "feedback": {
+      const { count, error } = await supabase.from("seller_feedback").select("slot", { count: "exact", head: true });
+      return <section className="seller-section seller-narrow"><h1>Feedback</h1>
+        {error ? <p className="seller-card" role="alert">Couldn’t load the feedback form. Refresh to try again.</p> : <SellerFeedback sent={count ?? 0} />}
+      </section>;
     }
-  };
+    case "my-startups": return <SellerStartups supabase={supabase} owner={owner} selected={params.startup} />;
+  }
+}
+
+async function SellerStartups({ supabase, owner, selected }: { supabase: Supabase; owner: string; selected?: string }) {
+  const { data, error } = await supabase.from("startup_submissions")
+    .select(`${startupDetailsColumns},wants_sale,startup_payment_sources(id,provider,name,synced_at)`)
+    .eq("owner_id", owner).order("created_at", { ascending: false }).returns<Draft[]>();
+  const drafts = data ?? [];
+  const { data: signedLogos } = drafts.length
+    ? await supabase.storage.from(startupLogoBucket).createSignedUrls(
+      drafts.map(draft => startupLogoPath(owner, draft.id)), 3600, { cacheNonce: randomUUID() },
+    )
+    : { data: null };
+  const logoUrls = new Map(signedLogos?.map(logo => [logo.path, logo.signedUrl]));
+  const logoFor = (draft: Draft) => logoUrls.get(startupLogoPath(owner, draft.id)) ?? importedLogoUrl(draft.imported_logo_url) ?? undefined;
+  const startup = drafts.find(draft => draft.id === selected) ?? drafts[0];
+
 
   return (
-    <>
-      <SiteHeader />
-      <main className="detail wrap">
-        {toastMsg && (
-          <div
-            className="toast-alert"
-            style={{
-              position: "fixed",
-              bottom: "2rem",
-              right: "2rem",
-              zIndex: 9999,
-              background: "var(--ink)",
-              color: "var(--on-ink)",
-              padding: "0.85rem 1.4rem",
-              borderRadius: "12px",
-              boxShadow: "var(--shadow-lg)",
-              border: "2px solid var(--brand)",
-              fontWeight: 600,
-            }}
-          >
-            ✅ {toastMsg}
+      <div className="dashboard-workspace">
+        <section className="dashboard-startups" aria-labelledby="dashboard-startups-title">
+          <div className="dashboard-panel-header">
+            <h1 id="dashboard-startups-title">My startups</h1>
+            <DashboardAddStartup />
           </div>
-        )}
+          {!drafts.length && !error && <p className="dashboard-empty">No startups yet.</p>}
+          {drafts.map(draft => (
+            <Link key={draft.id} className="dashboard-startup-row" href={sellerUrl("my-startups", { startup: draft.id })}
+              aria-current={draft.id === startup?.id ? "true" : undefined}>
+              <StartupLogo name={draft.name} src={logoFor(draft)} />
+              <span><strong>{draft.name}</strong><small>{draft.description || [...new Set(draft.startup_payment_sources.map(source => providerNames[source.provider]))].join(" · ") || "Draft"}</small></span>
+            </Link>
+          ))}
+        </section>
 
-        <div className="dash-hero">
-          <div>
-            <span className="eyebrow">Founder Workspace</span>
-            <h1>Dashboard</h1>
-            <p className="sub">Manage your listed startups, review acquisition offers, and track deals in progress.</p>
+        <section className="dashboard-profile" aria-labelledby="dashboard-profile-title">
+          <div className="dashboard-panel-header">
+            <h2 id="dashboard-profile-title">{startup?.name ?? "Startup details"}</h2>
+            {startup && <Link className="dashboard-website" href={`/startup/${startup.id}`}>View <Icon name="external" size={16} /></Link>}
           </div>
-          <Link href="/list" className="btn btn-brand">
-            + List Another Startup
-          </Link>
-        </div>
-
-        {/* KPI Counter Cards */}
-        <div className="dash-kpi-grid">
-          <div className="dash-kpi-card" onClick={() => setActiveTab("startups")}>
-            <span className="dk-num">{startups.length}</span>
-            <span className="dk-lbl">My Startups</span>
-          </div>
-
-          <div className="dash-kpi-card" onClick={() => setActiveTab("received")}>
-            <span className="dk-num" style={{ color: "#12b886" }}>
-              {offersReceived.length}
-            </span>
-            <span className="dk-lbl">Offers Received</span>
-          </div>
-
-          <div className="dash-kpi-card" onClick={() => setActiveTab("sent")}>
-            <span className="dk-num" style={{ color: "var(--brand)" }}>
-              {offersSent.length}
-            </span>
-            <span className="dk-lbl">Offers Sent</span>
-          </div>
-
-          <div className="dash-kpi-card" onClick={() => setActiveTab("saved")}>
-            <span className="dk-num">{savedListings.length}</span>
-            <span className="dk-lbl">Saved Watchlist</span>
-          </div>
-        </div>
-
-        {/* Dashboard Tabs Navigation */}
-        <div className="dash-tabs-bar">
-          <button
-            className={`dash-tab-btn ${activeTab === "startups" ? "active" : ""}`}
-            onClick={() => setActiveTab("startups")}
-          >
-            💼 My Startups ({startups.length})
-          </button>
-          <button
-            className={`dash-tab-btn ${activeTab === "received" ? "active" : ""}`}
-            onClick={() => setActiveTab("received")}
-          >
-            📬 Offers Received ({offersReceived.length})
-          </button>
-          <button
-            className={`dash-tab-btn ${activeTab === "sent" ? "active" : ""}`}
-            onClick={() => setActiveTab("sent")}
-          >
-            📤 Offers Sent ({offersSent.length})
-          </button>
-          <button
-            className={`dash-tab-btn ${activeTab === "saved" ? "active" : ""}`}
-            onClick={() => setActiveTab("saved")}
-          >
-            ♥ Saved Watchlist ({savedListings.length})
-          </button>
-        </div>
-
-        {/* TAB 1: MY STARTUPS */}
-        {activeTab === "startups" && (
-          <div className="dash-tab-content">
-            {startups.length === 0 ? (
-              <div className="empty">
-                You haven't listed any startups yet.{" "}
-                <Link href="/list" className="link">
-                  List your first startup now
-                </Link>
-                .
-              </div>
-            ) : (
-              <div className="lgrid">
-                {startups.map((s) => {
-                  const revTotal = totalRevenue(s as any);
-                  return (
-                    <div key={s.id} className="lcard">
-                      <div className="lc-top">
-                        <span className="logo-badge">{s.logo}</span>
-                        <div>
-                          <strong>{s.name}</strong>
-                          <small>{s.category} · Founded {s.founded}</small>
-                        </div>
-                        <span className={`vbadge ${s.verified ? "ok" : "self"}`}>
-                          {s.verified ? "✓ Verified" : "Self-reported"}
-                        </span>
-                      </div>
-
-                      <p className="lc-tag">{s.tagline}</p>
-
-                      <div className="lc-price">
-                        <span>Status</span>
-                        <strong>{s.isForSale ? `For Sale (${formatMoney(s.askingPrice || 0)})` : "Showcase Only"}</strong>
-                      </div>
-
-                      <dl className="lc-stats">
-                        <div>
-                          <dt>Revenue / yr</dt>
-                          <dd>{formatMoney(revTotal)}</dd>
-                        </div>
-                        {s.isForSale ? (
-                          <>
-                            <div>
-                              <dt>Profit / yr</dt>
-                              <dd>{formatMoney(s.profit || 0)}</dd>
-                            </div>
-                            <div>
-                              <dt>Multiple</dt>
-                              <dd>{s.profit ? `${((s.askingPrice || 0) / s.profit).toFixed(1)}x` : "—"}</dd>
-                            </div>
-                            <div>
-                              <dt>Margin</dt>
-                              <dd>{s.profit && revTotal ? `${Math.round(((s.profit || 0) / revTotal) * 100)}%` : "—"}</dd>
-                            </div>
-                          </>
-                        ) : (
-                          <div>
-                            <dt>Listing Mode</dt>
-                            <dd>Public Directory</dd>
-                          </div>
-                        )}
-                      </dl>
-
-                      <RevenueBar startup={s as any} />
-
-                      <div className="dash-card-actions">
-                        <button
-                          type="button"
-                          className="btn-text-sm"
-                          onClick={() => toggleStartupForSale(s.id)}
-                        >
-                          {s.isForSale ? "Pause Listing" : "Put Up For Sale"}
-                        </button>
-                        <Link href={`/marketplace`} className="btn-text-sm" style={{ color: "var(--brand)" }}>
-                          View Marketplace →
-                        </Link>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 2: OFFERS RECEIVED */}
-        {activeTab === "received" && (
-          <div className="dash-tab-content">
-            {offersReceived.length === 0 ? (
-              <div className="empty">
-                No buyer offers received yet. Make sure your startup is marked "For Sale" to attract verified buyers.
-              </div>
-            ) : (
-              <div className="offers-table-wrapper">
-                <table className="offers-table">
-                  <thead>
-                    <tr>
-                      <th>Startup</th>
-                      <th>Offered Amount</th>
-                      <th>Buyer Email</th>
-                      <th>Message</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {offersReceived.map((o) => (
-                      <tr key={o.id}>
-                        <td>
-                          <strong>{o.listingName}</strong>
-                        </td>
-                        <td className="amount-col">{usd(o.amount)}</td>
-                        <td>
-                          <span className="email-badge">{o.email}</span>
-                        </td>
-                        <td className="msg-col">
-                          <p title={o.message}>{o.message || "No message included."}</p>
-                        </td>
-                        <td>
-                          <span className={`st ${o.status}`}>{o.status}</span>
-                        </td>
-                        <td className="actions-col">
-                          {o.status === "pending" ? (
-                            <div className="btn-actions-group">
-                              <button
-                                className="btn-action-accept"
-                                onClick={() => updateOfferStatus(o.id, "accepted")}
-                              >
-                                Accept
-                              </button>
-                              <button
-                                className="btn-action-decline"
-                                onClick={() => updateOfferStatus(o.id, "declined")}
-                              >
-                                Decline
-                              </button>
-                            </div>
-                          ) : o.status === "accepted" ? (
-                            <Link href={`/deals/${o.id}`} className="btn-action-deal">
-                              Closing Room 🤝
-                            </Link>
-                          ) : (
-                            <span className="action-done">Declined</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 3: OFFERS SENT */}
-        {activeTab === "sent" && (
-          <div className="dash-tab-content">
-            {offersSent.length === 0 ? (
-              <div className="empty">
-                You haven't made any offers yet.{" "}
-                <Link href="/marketplace" className="link">
-                  Browse startups for sale
-                </Link>{" "}
-                to find opportunities.
-              </div>
-            ) : (
-              <div className="offers-table-wrapper">
-                <table className="offers-table">
-                  <thead>
-                    <tr>
-                      <th>Startup</th>
-                      <th>Your Offer</th>
-                      <th>Date</th>
-                      <th>Status</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {offersSent.map((o) => (
-                      <tr key={o.id}>
-                        <td>
-                          <Link href={`/marketplace/${o.listingId}`} className="link">
-                            <strong>{o.listingName}</strong>
-                          </Link>
-                        </td>
-                        <td className="amount-col">{usd(o.amount)}</td>
-                        <td>{new Date(o.createdAt).toLocaleDateString()}</td>
-                        <td>
-                          <span className={`st ${o.status}`}>{o.status}</span>
-                        </td>
-                        <td>
-                          {o.status === "accepted" ? (
-                            <Link href={`/deals/${o.id}`} className="btn-action-deal">
-                              Closing Room 🤝
-                            </Link>
-                          ) : (
-                            <Link href={`/marketplace/${o.listingId}`} className="btn-text-sm">
-                              Inspect Listing →
-                            </Link>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 4: SAVED WATCHLIST */}
-        {activeTab === "saved" && (
-          <div className="dash-tab-content">
-            {savedListings.length === 0 ? (
-              <div className="empty">
-                No saved startups in your watchlist. Click "Save for later" on any startup listing to bookmark it here.
-              </div>
-            ) : (
-              <div className="lgrid">
-                {savedListings.map((l) => (
-                  <Link key={l.id} href={`/marketplace/${l.id}`} className="lcard">
-                    <div className="lc-top">
-                      <span className="logo-badge">{l.logo}</span>
-                      <div>
-                        <strong>{l.name}</strong>
-                        <small>{l.category}</small>
-                      </div>
-                      <span className={`vbadge ${l.verified ? "ok" : "self"}`}>
-                        {l.verified ? "✓ Verified" : "Self-reported"}
-                      </span>
-                    </div>
-
-                    <p className="lc-tag">{l.tagline}</p>
-
-                    <div className="lc-price">
-                      <span>Asking price</span>
-                      <strong>{formatMoney(l.askingPrice)}</strong>
-                    </div>
-
-                    <dl className="lc-stats">
-                      <div>
-                        <dt>Revenue / yr</dt>
-                        <dd>{formatMoney(totalRevenue(l))}</dd>
-                      </div>
-                      <div>
-                        <dt>Profit / yr</dt>
-                        <dd>{formatMoney(l.profit)}</dd>
-                      </div>
-                    </dl>
-
-                    <span className="lc-foot">
-                      View details & Make offer →
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </main>
-      <SiteFooter />
-    </>
+          {error ? <p className="dashboard-empty" role="alert">Couldn’t load your startups. Try refreshing this page.</p>
+            : startup ? (
+              <>
+                <div className="seller-startup-banner seller-startup-blue"><span><Icon name="megaphone" size={22} /></span>
+                  <div><strong>Showcase your startup</strong><p>Preview your startup page and its revenue metrics.</p></div>
+                  <Link href={`/startup/${startup.id}`}>View page →</Link>
+                </div>
+                <div className="seller-startup-banner seller-startup-green"><span aria-hidden="true">$</span>
+                  <div><strong>Sell your startup?</strong><p>Save a request to list your startup on the marketplace.</p></div>
+                  <SaleRequest id={startup.id} requested={startup.wants_sale} key={startup.id} />
+                </div>
+                <div className="dashboard-status dashboard-sources">
+                  <div>
+                    <strong>Payment providers</strong>
+                    <ul>{startup.startup_payment_sources.map(source => (
+                      <li key={source.id}>{providerNames[source.provider]} · {source.name}{source.synced_at ? "" : " · Metrics pending"}</li>
+                    ))}</ul>
+                    {!startup.startup_payment_sources.length && <p>No providers connected.</p>}
+                  </div>
+                  <DashboardAddStartup startupId={startup.id} key={startup.id} />
+                </div>
+                <StartupDetailsForm key={startup.id} startup={startup} logoUrl={logoFor(startup)} />
+              </>
+            ) : <p className="dashboard-empty">Connect Stripe or RevenueCat to add your first startup.</p>}
+        </section>
+      </div>
   );
 }

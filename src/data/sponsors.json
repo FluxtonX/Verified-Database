@@ -1,0 +1,112 @@
+{
+  "Chargeback.io": {
+    "id": "standalone:6a96be6ae0dbebe25ca95b58",
+    "source": "standalone",
+    "sourceId": "6a96be6ae0dbebe25ca95b58",
+    "name": "Chargeback.io",
+    "link": "https://chargeback.io/?utm_source=trustmrr&utm_medium=referral&utm_campaign=sponsor_card",
+    "headline": "Prevent chargebacks on autopilot",
+    "bgColor": "#e5ecfe",
+    "bgColorDark": "#1a223a",
+    "logo": "/assets/sponsor-0.png"
+  },
+  "GojiberryAI": {
+    "id": "standalone:6a96be6be0dbebe25ca95b59",
+    "source": "standalone",
+    "sourceId": "6a96be6be0dbebe25ca95b59",
+    "name": "GojiberryAI",
+    "link": "https://gojiberry.ai/?utm_source=trustmrr&utm_medium=referral&utm_campaign=sponsor_card",
+    "headline": "Find warm leads and book  sales calls automatically",
+    "bgColor": "#ffe6e6",
+    "bgColorDark": "#3a1f1f",
+    "logo": "/assets/sponsor-1.png"
+  },
+  "Hugo AI": {
+    "id": "standalone:6a96be6de0dbebe25ca95b5e",
+    "source": "standalone",
+    "sourceId": "6a96be6de0dbebe25ca95b5e",
+    "name": "Hugo AI",
+    "link": "https://hugo.ai/?utm_source=trustmrr&utm_medium=referral&utm_campaign=sponsor_card",
+    "headline": "Hugo automates customer support, you ship features",
+    "bgColor": "#e6f1ff",
+    "bgColorDark": "#1a2a3a",
+    "logo": "/assets/sponsor-2.png"
+  },
+  "Virlo": {
+    "id": "standalone:6a96be6de0dbebe25ca95b5f",
+    "source": "standalone",
+    "sourceId": "6a96be6de0dbebe25ca95b5f",
+    "name": "Virlo",
+    "link": "https://virlo.ai/?utm_source=trustmrr&utm_medium=referral&utm_campaign=sponsor_card",
+    "headline": "Track, manage, leverage short-form data.",
+    "bgColor": "#ffe6f8",
+    "bgColorDark": "#3a1f3a",
+    "logo": "/assets/sponsor-3.png"
+  },
+  "Blotato": {
+    "id": "standalone:6a96be6ee0dbebe25ca95b60",
+    "source": "standalone",
+    "sourceId": "6a96be6ee0dbebe25ca95b60",
+    "name": "Blotato",
+    "link": "https://www.blotato.com/?utm_source=trustmrr&utm_medium=referral&utm_campaign=sponsor_card",
+    "headline": "Social Media API & MCP for Claude",
+    "bgColor": "#ffe6f2",
+    "bgColorDark": "#3a1f3a",
+    "logo": "/assets/sponsor-4.png"
+  },
+  "CREEM": {
+    "id": "standalone:6a96be6fe0dbebe25ca95b61",
+    "source": "standalone",
+    "sourceId": "6a96be6fe0dbebe25ca95b61",
+    "name": "CREEM",
+    "link": "https://creem.io/?utm_source=trustmrr&utm_medium=referral&utm_campaign=sponsor_card",
+    "headline": "Sell Software globally, grow your revenue",
+    "bgColor": "#ffe6f2",
+    "bgColorDark": "#3a1f3a",
+    "logo": "/assets/sponsor-5.png"
+  },
+  "Higgsfield": {
+    "id": "standalone:6a9c19da5227cec8d7c68fef",
+    "source": "standalone",
+    "sourceId": "6a9c19da5227cec8d7c68fef",
+    "name": "Higgsfield",
+    "link": "https://higgsfield.ai/marclou?utm_source=trustmrr&utm_medium=referral&utm_campaign=sponsor_card",
+    "headline": "Create AI videos and images with Higgsfield",
+    "bgColor": "#e6fff0",
+    "bgColorDark": "#1a3a2a",
+    "logo": "/assets/sponsor-6.png"
+  },
+  "BlogSEO": {
+    "id": "standalone:6aca454b21a059feae46023f",
+    "source": "standalone",
+    "sourceId": "6aca454b21a059feae46023f",
+    "name": "BlogSEO",
+    "link": "https://blogseo.io/?utm_source=trustmrr&utm_medium=referral&utm_campaign=sponsor_card",
+    "headline": "SEO on autopilot: Rank #1 on Google & ChatGPT (Try for free, 2-minute setup)",
+    "bgColor": "#fff7e4",
+    "bgColorDark": "#3a2f1f",
+    "logo": "/assets/sponsor-7.png"
+  },
+  "Fuse AI": {
+    "id": "standalone:6ad6c2b2b927e311c7da3cf6",
+    "source": "standalone",
+    "sourceId": "6ad6c2b2b927e311c7da3cf6",
+    "name": "Fuse AI",
+    "link": "https://fuseai.com/?utm_source=trustmrr&utm_medium=referral&utm_campaign=sponsor_card",
+    "headline": "10x revenue with AI agents built to find, enrich, and engage customers.",
+    "bgColor": "#f9e6ff",
+    "bgColorDark": "#3a1f3a",
+    "logo": "/assets/sponsor-8.png"
+  },
+  "AiSDR INC.": {
+    "id": "startup_addon:6aec72503480e9bf633c16ba",
+    "source": "startup_addon",
+    "sourceId": "6aec72503480e9bf633c16ba",
+    "name": "AiSDR INC.",
+    "link": "https://aisdr.com/?ref=trustmrr",
+    "headline": "AI sales outreach you can trust",
+    "bgColor": "#f9e6ff",
+    "bgColorDark": "#3a1f3a",
+    "logo": "/assets/sponsor-9.png"
+  }
+}
