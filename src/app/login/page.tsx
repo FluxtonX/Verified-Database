@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createSupabase } from "@/lib/supabase/server";
 import { loginDestination } from "@/lib/supabase/config";
 import { signOut } from "./actions";
@@ -18,6 +19,7 @@ export default async function LoginPage({ searchParams }: {
   const supabase = await createSupabase();
   const session = await supabase?.auth.getClaims();
   const signedIn = Boolean(session?.data?.claims.sub);
+  if (signedIn && error !== "logout") redirect(loginDestination(next));
   return (
     <main className="login-page">
       <div className="login-shell">
@@ -28,7 +30,7 @@ export default async function LoginPage({ searchParams }: {
         <section className="login-card" aria-labelledby="login-heading">
           <h1 id="login-heading">{signedIn ? "You’re signed in" : "Log in to buy and sell startups"}</h1>
           <p className="login-description">Get deal flow, list your startup, and talk with founders.</p>
-          {error === "google" && <p role="alert">Google sign-in didn’t finish. Please try again.</p>}
+          {error === "callback" && <p role="alert">Sign-in didn’t finish. Please try again.</p>}
           {error === "logout" && <p role="alert">We couldn’t sign you out. Please try again.</p>}
           {signedIn ? (
             <form className="login-form" action={signOut}>

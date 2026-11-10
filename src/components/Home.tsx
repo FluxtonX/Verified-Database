@@ -2,6 +2,7 @@
 
 /* Reference assets are intentionally rendered as local, small images at their native sizes. */
 /* eslint-disable @next/next/no-img-element */
+import type { SponsorCard, SponsorCatalog, SponsorPrice } from "@/lib/sponsorship";
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { setActivityLike } from "@/app/catalog-actions";
@@ -10,6 +11,7 @@ import data from "@/data/homepage.json";
 import SponsorRail from "@/components/SponsorRail";
 import { Icon } from "@/components/icons";
 import AddStartupModal from "@/components/AddStartupModal";
+import { sellerUrl } from "@/lib/seller-dashboard";
 
 type Catalog = Awaited<ReturnType<typeof readHome>>;
 type Listing = Catalog["recent"][number];
@@ -100,11 +102,14 @@ function LiveFeedPost({ post, signedIn }: { post: FeedRow; signedIn: boolean }) 
   </article>;
 }
 
-export default function Home({ catalog, signedIn, categories, openSubmission }: {
+export default function Home({ catalog, signedIn, openSubmission, sponsors, sponsorPrice, sponsorCheckout, publishedSponsor }: {
   catalog: Catalog | null;
   signedIn: boolean;
-  categories: string[];
   openSubmission: boolean;
+  sponsors: SponsorCatalog | null;
+  sponsorPrice: SponsorPrice | null;
+  sponsorCheckout: boolean;
+  publishedSponsor?: SponsorCard;
 }) {
   const [query, setQuery] = useState("");
   const [metric, setMetric] = useState("MRR");
@@ -121,14 +126,24 @@ export default function Home({ catalog, signedIn, categories, openSubmission }: 
   const growthValue = (startup: Startup) => startup.growth === "—" ? -Infinity : parseFloat(startup.growth) * (startup.negative ? -1 : 1);
   const sorted = metric === "MoM Growth" ? [...startups].sort((a, b) => growthValue(b) - growthValue(a)) : startups;
   return <>
-    <SponsorRail side="left"/><SponsorRail side="right"/>
+    {signedIn && <nav className="home-shortcuts" aria-label="Account shortcuts">
+      <Link className="home-shortcut-primary" href="/dashboard"><Icon name="profile" size={16}/>Dashboard</Link>
+      <Link href={sellerUrl("chat")}><Icon name="comment" size={16}/>Chat</Link>
+      <a href="#feed"><Icon name="inbox" size={16}/>Feed</a>
+      <Link href="/acquire"><Icon name="search" size={16}/>Marketplace</Link>
+    </nav>}
+    <SponsorRail catalog={sponsors} price={sponsorPrice} enabled={sponsorCheckout}
+      hideLeft={signedIn} featured={publishedSponsor} />
     <main id="top" className="page"><div className="container">
+      {publishedSponsor && <p className="home-sponsor-confirmation" role="status">
+        {publishedSponsor.name} is now live as a sponsor. <Link href="/advertise">Manage sponsorship →</Link>
+      </p>}
       <div className="intro-and-listings"><header className="hero">
         <Brand/>
         <h1>The database of verified startup revenues</h1>
         <p className="hero-description">Browse SaaS, mobile apps, and digital businesses for acquisition on VerifedDB. <Link href="/acquire">Explore the marketplace</Link></p>
         <div className="hero-actions"><label className="search-box"><Icon name="search" size={20}/><input aria-label="Search startups" placeholder="Search startups" value={query} onChange={e => setQuery(e.target.value)}/></label><button ref={addStartupButtonRef} className="add-startup" onClick={() => setShowAddStartup(true)}><Icon name="plus" size={20}/>Add startup</button></div>
-        <nav className="hero-nav" aria-label="Main navigation"><Link href="/acquire">Buy/sell</Link><span>·</span><a href="#leaderboard">Stats</a><span>·</span><Link href="/login">Dashboard</Link></nav>
+        <nav className="hero-nav" aria-label="Main navigation"><Link href="/acquire">Buy/sell</Link><span>·</span><a href="#leaderboard">Stats</a><span>·</span><Link href="/dashboard">Dashboard</Link></nav>
       </header>
       {catalog?.failed && <p role="alert">Some startup data is temporarily unavailable.</p>}<div id="recently-listed"><ListingRow title="Recently listed" listings={catalog?.recent ?? demoListings(data.recent)}/><ListingRow title="Best deals this week" listings={catalog?.deals ?? demoListings(data.deals)}/></div></div>
       <section className="leaderboard" id="leaderboard" aria-labelledby="leaderboard-heading">
@@ -143,6 +158,6 @@ export default function Home({ catalog, signedIn, categories, openSubmission }: 
         : [0, 2, 4].map(i => <div className="feed-column" key={i}>{posts.slice(i, i + 2).map(post => <FeedPost post={post} key={post.author + post.time}/>)}</div>)}</div>{catalog && !catalog.feed.length && <p className="empty-state">No updates yet.</p>}</section>
       <footer><Brand/><h2>The database of verified startup revenues</h2><p>VerifedDB · Verified startup revenues</p><a href="#top">Back to top ↑</a></footer>
     </div></main>
-    {showAddStartup && <AddStartupModal triggerRef={addStartupButtonRef} onClose={() => setShowAddStartup(false)} signedIn={signedIn} configured={Boolean(catalog)} categories={categories} next="/?submit=1" />}
+    {showAddStartup && <AddStartupModal triggerRef={addStartupButtonRef} onClose={() => setShowAddStartup(false)} signedIn={signedIn} next="/?submit=1" />}
   </>;
 }

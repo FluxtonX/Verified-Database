@@ -13,7 +13,9 @@ export async function saveStartup(_: DraftState, form: FormData): Promise<DraftS
   const name = String(form.get("name") ?? "").trim();
   const websiteInput = String(form.get("website") ?? "").trim();
   const category = String(form.get("category") ?? "");
+  const provider = form.get("provider") ?? "stripe";
   const handle = String(form.get("x-handle") ?? "").trim().replace(/^@/, "");
+  if (provider !== "stripe" && provider !== "revenuecat") return { error: "Choose a supported payment provider." };
   if (!name || name.length > 100 || !category) return { error: "Enter a startup name and category." };
   if (handle && !/^[A-Za-z0-9_]{1,15}$/.test(handle)) return { error: "Enter a valid X handle." };
 
@@ -32,7 +34,7 @@ export async function saveStartup(_: DraftState, form: FormData): Promise<DraftS
   const addons = [...new Set(form.getAll("addon").map(String))];
   const { error } = await supabase.from("startup_submissions").insert({
     name, website_url: website.href, category, x_handle: handle || null,
-    provider: "stripe", anonymous: form.has("anonymous"), wants_sale: form.has("wants-sale"),
+    provider, anonymous: form.has("anonymous"), wants_sale: form.has("wants-sale"),
     addon_interests: addons,
   });
   if (error?.code === "23505") return { error: "You already have a draft for this website." };

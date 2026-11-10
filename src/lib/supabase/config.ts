@@ -15,10 +15,14 @@ export const oauthDestinationCookie = "verified-oauth-destination";
 export function loginDestination(value: unknown) {
   switch (value) {
     case "/?submit=1":
+    case "/acquire":
+    case "/advertise":
     case "/acquire?submit=1":
+    case "/dashboard":
+    case "/dashboard?tab=settings&mode=seller":
     case "/":
       return value;
     default:
-      return "/acquire";
+      return "/";
   }
 }

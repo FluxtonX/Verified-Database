@@ -4,6 +4,7 @@ import { createSupabase } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
+  const flowId = request.nextUrl.searchParams.get("sb_flow_id");
   const next = loginDestination(request.cookies.get(oauthDestinationCookie)?.value);
   function finish(destination: URL) {
     const response = NextResponse.redirect(destination);
@@ -14,12 +15,12 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createSupabase();
   if (code && supabase) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined);
     if (!error) return finish(new URL(next, appOrigin()));
   }
 
   const login = new URL("/login", appOrigin());
   login.searchParams.set("next", next);
-  login.searchParams.set("error", "google");
+  login.searchParams.set("error", "callback");
   return finish(login);
 }

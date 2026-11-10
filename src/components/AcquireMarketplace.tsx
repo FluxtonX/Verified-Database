@@ -1,6 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
+import type { SponsorCatalog, SponsorPrice } from "@/lib/sponsorship";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "./icons";
@@ -82,13 +83,16 @@ function FounderTestimonials() {
   </article>)}</div></section>;
 }
 
-export default function AcquireMarketplace({ listings, configured, failed, categories, signedIn, openSubmission }: {
+export default function AcquireMarketplace({ listings, configured, failed, categories, signedIn, openSubmission, sponsors, sponsorPrice, sponsorCheckout }: {
   listings: Startup[] | null;
   configured: boolean;
   failed: boolean;
   categories: string[];
   signedIn: boolean;
   openSubmission: boolean;
+  sponsors: SponsorCatalog | null;
+  sponsorPrice: SponsorPrice | null;
+  sponsorCheckout: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("default");
@@ -155,7 +159,7 @@ export default function AcquireMarketplace({ listings, configured, failed, categ
   const setSelection = (label: string, value: string) => setSelections(current => ({ ...current, [label]: value }));
 
   return <>
-    <SponsorRail side="left" marketplace /><SponsorRail side="right" marketplace />
+    <SponsorRail catalog={sponsors} price={sponsorPrice} enabled={sponsorCheckout} marketplace />
     <main className="page acquire-page"><div className="acquire-container">
       <header className="acquire-hero"><Brand /><h1>Acquire Profitable Startups</h1>
         <p>Buy and sell SaaS, mobile apps, and digital businesses on a marketplace with payment-provider revenue verification.</p>
@@ -193,6 +197,6 @@ export default function AcquireMarketplace({ listings, configured, failed, categ
       </div>
       <footer className="acquire-footer"><Brand /><h2>The marketplace for verified startup revenues</h2><button className="add-startup" onClick={() => setShowModal(true)}><Icon name="plus" size={20} />Sell startup</button><p>AI assistant? Read <Link href="/llms.txt">llms.txt</Link>.</p></footer>
     </div></main>
-    {showModal && <AddStartupModal triggerRef={sellButtonRef} onClose={() => setShowModal(false)} signedIn={signedIn} configured={configured} categories={categories} next="/acquire?submit=1" />}
+    {showModal && <AddStartupModal triggerRef={sellButtonRef} onClose={() => setShowModal(false)} signedIn={signedIn} next="/acquire?submit=1" />}
   </>;
 }

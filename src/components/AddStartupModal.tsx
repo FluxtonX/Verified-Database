@@ -3,83 +3,173 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
-import { saveStartup } from "@/app/catalog-actions";
 import { useActionState, useEffect, useRef, useState, type RefObject } from "react";
+import { importStartupSource } from "@/app/dashboard/actions";
 import { Icon } from "./icons";
 
-function Toggle({ label, name, info, initial = false }: {
-  label: string; name: string; info?: string; initial?: boolean;
-}) {
-  const [checked, setChecked] = useState(initial);
+const providers = [
+  {
+    id: "stripe",
+    name: "Stripe",
+    logo: "/assets/provider-0.webp",
+    placeholder: "rk_live_...",
+    guide: "https://dashboard.stripe.com/apikeys/create?name=VerifiedDB&permissions%5B%5D=rak_charge_read&permissions%5B%5D=rak_subscription_read&permissions%5B%5D=rak_plan_read&permissions%5B%5D=rak_bucket_connect_read&permissions%5B%5D=rak_file_read&permissions%5B%5D=rak_product_read",
+    instructions: [
+      "Review the preset read-only permissions",
+      "Create the restricted key",
+      "Paste the key above to import your startup",
+    ],
+  },
+  {
+    id: "revenuecat",
+    name: "RevenueCat",
+    logo: "/assets/provider-5.webp",
+    placeholder: "sk_...",
+    guide: process.env.NEXT_PUBLIC_REVENUECAT_SETUP_URL || "https://www.revenuecat.com/docs/api-v2#api-v2-permissions",
+    instructions: [
+      "Open API keys in your project settings",
+      "Create a new V2 API key",
+      "Allow read access to Projects, Apps, Overview Metrics, and Charts",
+    ],
+  },
+] as const;
+
+type Provider = (typeof providers)[number];
+
+function ProviderPicker({ provider, onSelect }: { provider: Provider; onSelect: (provider: Provider) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [highlighted, setHighlighted] = useState(-1);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const search = useRef<HTMLInputElement>(null);
+  const matches = providers.filter(option => option.name.toLowerCase().includes(query.trim().toLowerCase()));
+  const activeOption = matches[highlighted];
+
+  useEffect(() => {
+    if (open) search.current?.focus();
+  }, [open]);
+
+  function choose(option: Provider) {
+    onSelect(option);
+    setOpen(false);
+    trigger.current?.focus();
+  }
 
   return (
-    <div className="startup-toggle-row">
-      {checked && <input type="hidden" name={name} value="on" />}
+    <div
+      className="startup-provider-field"
+      onBlur={event => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      }}
+    >
+      <label id="startup-provider-label" htmlFor="startup-provider">Choose your payment provider</label>
       <button
+        id="startup-provider"
+        ref={trigger}
         type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        className="startup-toggle"
-        onClick={() => setChecked(!checked)}
+        className="startup-provider-trigger"
+        aria-labelledby="startup-provider-label startup-provider-value"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => {
+          setQuery("");
+          setHighlighted(-1);
+          setOpen(!open);
+        }}
       >
-        <span />
+        <img src={provider.logo} width="18" height="18" alt="" />
+        <span id="startup-provider-value">{provider.name}</span>
+        <Icon name="chevrons" size={16} />
       </button>
-      <span>{label}</span>
-      {info && (
-        <span className="startup-info" title={info} aria-label={info}>
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 10v7m0-11v1" />
-          </svg>
-        </span>
+      {open && (
+        <div className="startup-provider-menu">
+          <div className="startup-provider-search">
+            <Icon name="search" size={16} />
+            <input
+              ref={search}
+              role="combobox"
+              aria-label="Search payment provider"
+              aria-expanded={open}
+              aria-controls="startup-provider-options"
+              aria-activedescendant={activeOption && `startup-provider-${activeOption.id}`}
+              placeholder="Search payment provider..."
+              value={query}
+              onChange={event => {
+                setQuery(event.target.value);
+                setHighlighted(-1);
+              }}
+              onKeyDown={event => {
+                switch (event.key) {
+                  case "ArrowDown":
+                    event.preventDefault();
+                    setHighlighted(Math.min(highlighted + 1, matches.length - 1));
+                    break;
+                  case "ArrowUp":
+                    event.preventDefault();
+                    setHighlighted(Math.max(highlighted - 1, 0));
+                    break;
+                  case "Enter":
+                    event.preventDefault();
+                    if (activeOption ?? matches[0]) choose(activeOption ?? matches[0]);
+                    break;
+                  case "Escape":
+                    event.preventDefault();
+                    setOpen(false);
+                    trigger.current?.focus();
+                    break;
+                }
+              }}
+            />
+          </div>
+          <div id="startup-provider-options" role="listbox" aria-labelledby="startup-provider-label">
+            {matches.map((option, index) => (
+              <button
+                key={option.id}
+                id={`startup-provider-${option.id}`}
+                type="button"
+                role="option"
+                tabIndex={-1}
+                aria-selected={option.id === provider.id}
+                className="startup-provider-option"
+                data-highlighted={index === highlighted}
+                onMouseDown={event => event.preventDefault()}
+                onClick={() => choose(option)}
+              >
+                <img src={option.logo} width="18" height="18" alt="" />
+                {option.name}
+                {option.id === provider.id && <Icon name="check" size={16} />}
+              </button>
+            ))}
+          </div>
+          {matches.length === 0 && <p className="startup-provider-empty" role="status">No payment providers found.</p>}
+        </div>
       )}
     </div>
   );
 }
 
-export default function AddStartupModal({ onClose, triggerRef, signedIn, categories, next, configured }: {
-  signedIn: boolean;
-  categories: string[];
-  next: string;
-  configured: boolean;
+export default function AddStartupModal({ onClose, triggerRef, signedIn, next, startupId }: {
   onClose: () => void;
   triggerRef: RefObject<HTMLButtonElement | null>;
+  signedIn: boolean;
+  next: string;
+  startupId?: string;
 }) {
-  const [name, setName] = useState("");
-  const [website, setWebsite] = useState("");
-  const [handle, setHandle] = useState("");
-  const [category, setCategory] = useState("");
+  const [provider, setProvider] = useState<Provider>(providers[0]);
+  const [state, action, pending] = useActionState(importStartupSource.bind(null, startupId ?? null), {});
+  const stripe = provider.id === "stripe";
+  const canImport = signedIn;
+  useEffect(() => {
+    if (state.saved) onClose();
+  }, [state.saved, onClose]);
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [result, action, pending] = useActionState(saveStartup, {});
-  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
-  const addons = [
-    {
-      id: "dofollow",
-      title: "Dofollow link · Domain Authority 69",
-      price: "$19",
-      description: "Build trust with a verified revenue profile and an authority link that helps search engines and AI assistants recognize your site as the canonical destination.",
-    },
-    {
-      id: "ai-visibility",
-      title: "AI visibility boost",
-      price: "$79",
-      description: "Give ChatGPT and other AI assistants a verified VerifedDB profile they can use to recognize and recommend your startup as a trusted tool.",
-    },
-    {
-      id: "sponsor",
-      title: "Side-panel sponsor spot",
-      price: "$399",
-      description: "Put your startup in the sponsor panels across VerifedDB for 7 days, in front of 200K monthly visitors.",
-    },
-  ];
 
   useEffect(() => {
     const dialog = dialogRef.current;
     const trigger = triggerRef.current;
     const previousOverflow = document.body.style.overflow;
     dialog?.showModal();
-    dialog?.querySelector<HTMLInputElement>("#startup-name")?.focus({ preventScroll: true });
+    dialog?.querySelector<HTMLInputElement>("#startup-api-key")?.focus({ preventScroll: true });
     document.body.style.overflow = "hidden";
 
     return () => {
@@ -105,64 +195,50 @@ export default function AddStartupModal({ onClose, triggerRef, signedIn, categor
     >
       <header className="startup-dialog-header">
         <div className="startup-title-row">
-          <h2 id="add-startup-title">Add your startup</h2>
+          <h2 id="add-startup-title">{startupId ? "Connect a payment provider" : "Add your startup"}</h2>
+          <span className="startup-visitors"><span className="visitor-dot" aria-hidden="true" /><strong>2</strong> payment providers</span>
         </div>
-        <p id="add-startup-description">Save a private draft to get started.</p>
+        <p id="add-startup-description">{startupId ? "Add a new source or refresh an existing one with its read-only key." : <>Showcase your revenue with <strong>Stripe or RevenueCat</strong>. It&apos;s free!</>}</p>
         <button type="button" className="startup-close" onClick={onClose} aria-label="Close add startup dialog"><Icon name="close" size={20} /></button>
       </header>
 
-      {!signedIn ? <div className="startup-dialog-body">
-        <p>{configured ? "Sign in to save your startup draft." : "Startup drafts will be available once Supabase is configured."}</p>
-        {configured && <Link className="marketplace-account-link" href={`/login?next=${encodeURIComponent(next)}`}>Continue to login</Link>}
-      </div> : result.saved ? <div className="startup-dialog-body">
-        <p role="status">Draft saved. Your startup stays private while revenue verification is pending.</p>
-        <button type="button" className="startup-submit" onClick={onClose}>Done</button>
-      </div> : <form className="startup-form" action={action}>
+      <form className="startup-form" action={action}>
         <div className="startup-dialog-body">
-          <div className="startup-draft-fields">
-            <label htmlFor="startup-name">Startup name</label>
-            <input id="startup-name" name="name" type="text" value={name} onChange={event => setName(event.target.value)} maxLength={100} required autoFocus />
-            <label htmlFor="startup-website">Website</label>
-            <input id="startup-website" name="website" type="url" value={website} onChange={event => setWebsite(event.target.value)} placeholder="https://example.com" maxLength={2048} required />
-            <label htmlFor="startup-category">Category</label>
-            <div className="startup-provider-select startup-category-select">
-              <select id="startup-category" name="category" value={category} onChange={event => setCategory(event.target.value)} required>
-                <option value="" disabled>Select a category</option>
-                {categories.map(category => <option key={category}>{category}</option>)}
-              </select>
-            </div>
+          <ProviderPicker provider={provider} onSelect={setProvider} />
+          <input type="hidden" name="provider" value={provider.id} />
+          <div className="startup-key-field">
+            <label htmlFor="startup-api-key">1. {provider.name} API key</label>
+            <input
+              key={provider.id}
+              id="startup-api-key"
+              name={canImport ? "api-key" : undefined}
+              type="password"
+              placeholder={provider.placeholder}
+              readOnly={!canImport}
+              required={canImport}
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={256}
+              title={canImport ? undefined : "Sign in to connect a payment provider."}
+            />
+            <a className="startup-key-help" href={provider.guide} target="_blank" rel="noopener noreferrer" aria-label={`Open ${provider.name} API key setup guide (opens in a new tab)`}>
+              <div>
+                <p>Click here to create a read-only API key.</p>
+                <ol>{provider.instructions.map(step => <li key={step}>{step}</li>)}</ol>
+              </div>
+              <Icon name="external" size={16} />
+            </a>
           </div>
 
-          <div className="startup-provider-field">
-            <p>Payment provider <strong>Stripe</strong></p>
-            <p>Connect Stripe after revenue verification is available.</p>
-          </div>
-
-          <div className="startup-handle-field">
+          {!stripe && <div className="startup-key-field">
+            <label htmlFor="startup-project-id">RevenueCat project ID</label>
+            <input id="startup-project-id" name="project-id" type="text" placeholder="proj..." maxLength={104} spellCheck={false} />
+            <p className="muted">Optional if the key has access to just one project.</p>
+          </div>}
+          {!startupId && <div className="startup-handle-field">
             <label htmlFor="startup-x-handle">𝕏 handle (optional)</label>
-            <input id="startup-x-handle" name="x-handle" type="text" value={handle} onChange={event => setHandle(event.target.value)} placeholder="username" autoComplete="off" spellCheck={false} />
-          </div>
-
-          <Toggle name="anonymous" label="Anonymous mode" info="Hide your startup’s name and details on the public leaderboard." />
-
-          <div className="startup-addons" aria-label="Optional startup add-ons">
-            <p>Save your add-on interests for later.</p>
-            {addons.map(addon => (
-              <label className="startup-addon" key={addon.id}>
-                <input
-                  type="checkbox" name="addon" value={addon.id}
-                  checked={selectedAddons.includes(addon.id)}
-                  onChange={event => setSelectedAddons(current =>
-                    event.target.checked ? [...current, addon.id] : current.filter(id => id !== addon.id)
-                  )}
-                />
-                <span className="startup-addon-content">
-                  <span className="startup-addon-title"><span>{addon.title}</span><strong>{addon.price}</strong></span>
-                  <span className="startup-addon-description">{addon.description}</span>
-                </span>
-              </label>
-            ))}
-          </div>
+            <input id="startup-x-handle" name="x-handle" type="text" placeholder="username" autoComplete="off" spellCheck={false} maxLength={16} />
+          </div>}
 
           <figure className="startup-testimonial">
             <div className="startup-testimonial-stars" role="img" aria-label="5 out of 5 stars">
@@ -177,15 +253,17 @@ export default function AddStartupModal({ onClose, triggerRef, signedIn, categor
             </figcaption>
             <div className="startup-testimonial-dots" aria-hidden="true"><span /><span /><span className="active" /><span /></div>
           </figure>
-
-          {result.error && <p role="alert">{result.error}</p>}
         </div>
 
         <div className="startup-dialog-footer">
-          <Toggle name="wants-sale" label="List for sale" initial={next.startsWith("/acquire")} />
-          <button type="submit" className="startup-submit" disabled={pending || !categories.length}>{pending ? "Saving…" : "Save draft"}</button>
+          {state.error && <p className="startup-import-error" role="alert">{state.error}</p>}
+          {!signedIn ? (
+            <Link className="startup-submit" href={`/login?next=${encodeURIComponent(next)}`}>Sign in to add</Link>
+          ) : (
+            <button type="submit" className="startup-submit" disabled={!canImport || pending}>{pending ? "Importing metrics…" : startupId ? "Connect provider" : "Add startup"}</button>
+          )}
         </div>
-      </form>}
+      </form>
     </dialog>
   );
 }
