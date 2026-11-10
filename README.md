@@ -36,7 +36,6 @@ TrustMRR uses a public revenue leaderboard and acquisition cards that show 30-da
 3. **Verification and publishing.** Add Stripe authorization, server-side credential storage, source deduplication, a retryable sync job, and a review/publish workflow. Define refund handling, currency normalization and the recurring-revenue calculation before marking data verified. Founder submissions currently save drafts. Paid add-ons, buyer offers and messaging, and founder dashboard workflows belong to later phases.
 
 ## Sponsorship checkout
-
 Apply the sponsorship migration to load the starter cards and inventory. Set `SUPABASE_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_SPONSOR_PRICE_ID`, and `STRIPE_SPONSOR_WEBHOOK_SECRET` on the server. Set the ID of an active, fixed-price USD Price that bills every month. The app displays the amount returned by Stripe. Enable subscription cancellation in the Stripe customer portal.
 
 Register `/api/stripe/sponsorship` for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.paused`, and `customer.subscription.resumed`. Use Stripe test credentials and a separate Supabase project or local database to exercise checkout without publishing test sponsors to the live site.
