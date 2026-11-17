@@ -56,6 +56,7 @@ export default async function AdvertisePage({ searchParams }: {
           <label>Startup name<input name="name" maxLength={60} defaultValue={sponsorship.name ?? ""} required /></label>
           <label>Short description<textarea name="headline" maxLength={150} rows={3} defaultValue={sponsorship.headline ?? ""} required /></label>
           <label>Website URL<input type="url" name="website" maxLength={2048} placeholder="https://example.com" defaultValue={sponsorship.website_url ?? ""} required /></label>
+          <p className="muted">VerifedDB referral tags are added automatically to sponsor-card links. Use your own landing page or partner URL.</p>
           <label>Logo URL (optional)<input type="url" name="logo" maxLength={2048} placeholder="https://example.com/logo.png" defaultValue={sponsorship.logo_url ?? ""} /></label>
           <button className="add-startup sponsor-primary">{sponsorship.name ? "Save sponsor card" : "Publish sponsor card"}</button>
         </form>
