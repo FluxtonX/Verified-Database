@@ -6,10 +6,13 @@ import Link from "next/link";
 import { Icon } from "./icons";
 import { SponsorOffer } from "./SponsorOffer";
 import type { SponsorCard, SponsorCatalog, SponsorPrice } from "@/lib/sponsorship";
+import { sponsorCardUrl } from "@/lib/sponsor-links";
 
 function Card({ sponsor }: { sponsor: SponsorCard }) {
-  return <a className="sponsor-card" style={{ backgroundColor: sponsor.background_color }} href={sponsor.website_url}
-    target="_blank" rel="noopener noreferrer sponsored">
+  const href = sponsorCardUrl(sponsor.website_url);
+  if (!href) return null;
+  return <a className="sponsor-card" style={{ backgroundColor: sponsor.background_color }} href={href}
+    target="_blank" rel="noopener sponsored" referrerPolicy="strict-origin-when-cross-origin">
     {sponsor.logo_url && <img src={sponsor.logo_url} alt="" width="24" height="24" referrerPolicy="no-referrer" />}
     <h3>{sponsor.name}</h3><p>{sponsor.headline}</p>
   </a>;
