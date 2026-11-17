@@ -12,12 +12,15 @@ export default async function AcquirePage({ searchParams }: {
   searchParams: Promise<{ submit?: string }>;
 }) {
   const [context, params] = await Promise.all([catalogContext(), searchParams]);
-  const [listings, sponsors, sponsorPrice] = await Promise.all([
+  const [listings, sponsors, sponsorPrice, saves, buyer, owned] = await Promise.all([
     context && readMarketplace(context.supabase),
     readSponsorCatalog(context?.supabase ?? null),
     readSponsorPrice(),
+    context?.signedIn ? context.supabase.from("saved_listings").select("listing_id") : null,
+    context?.signedIn ? context.supabase.from("buyer_profiles").select("id").maybeSingle() : null,
+    context?.signedIn ? context.supabase.from("seller_publications").select("listing_id") : null,
   ]);
-  return <AcquireMarketplace listings={listings} configured={Boolean(context)}
+  return <AcquireMarketplace ownedIds={owned?.data?.map(item => item.listing_id) ?? []} savedIds={saves?.data?.map(save => save.listing_id) ?? []} buyerReady={Boolean(buyer?.data)} buyerActivityFailed={Boolean(saves?.error || buyer?.error || owned?.error)} listings={listings} configured={Boolean(context)}
     failed={Boolean(context && (context.failed || !listings))}
     categories={context?.categories ?? []} signedIn={context?.signedIn ?? false}
     sponsors={sponsors} sponsorPrice={sponsorPrice} sponsorCheckout={sponsorCheckoutEnabled()}

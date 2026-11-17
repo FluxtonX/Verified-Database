@@ -11,7 +11,7 @@ export default function DashboardAddStartup({ startupId }: { startupId?: string 
   return (
     <>
       <button ref={trigger} type="button" className="startup-submit" onClick={() => setOpen(true)}>
-        <Icon name="plus" size={16} /> {startupId ? "Connect provider" : "Add"}
+        <Icon name="plus" size={16} /> {startupId ? "Connect provider" : "Add startup"}
       </button>
       {open && <AddStartupModal triggerRef={trigger} onClose={() => setOpen(false)} signedIn next="/dashboard" startupId={startupId} />}
     </>

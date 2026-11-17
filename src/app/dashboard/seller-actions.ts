@@ -133,7 +133,7 @@ export async function sendSellerMessage(leadId: string, _: State, form: FormData
 export async function setSellerLeadArchived(leadId: string, archived: boolean): Promise<State> {
   const user = await account();
   if (!user || !isId(leadId)) return { error: "Conversation unavailable." };
-  const { data, error } = await user.supabase.from("seller_leads").update({ archived }).eq("id", leadId).select("id").maybeSingle();
+  const { data, error } = await user.supabase.from("seller_leads").update({ archived }).eq("seller_id", user.id).eq("id", leadId).select("id").maybeSingle();
   if (error || !data) return { error: "Couldn’t move this conversation. Try again." };
   revalidatePath("/dashboard");
   return { message: archived ? "Conversation archived." : "Conversation restored." };

@@ -92,6 +92,7 @@ export async function updateStartupDetails(id: string, _: ActionState, form: For
   const value = (field: string) => String(form.get(field) ?? "").trim();
   const tags = (field: string) => [...new Set(value(field).split(",").map(tag => tag.trim()).filter(Boolean))];
   const name = value("name");
+  const category = value("category");
   const websiteInput = value("website");
   const website = startupWebsite(websiteInput);
   const handle = startupHandle(form.get("x-handle"));
@@ -115,6 +116,7 @@ export async function updateStartupDetails(id: string, _: ActionState, form: For
   const appStore = storeLink(appStoreInput, "apps.apple.com");
   const googlePlay = storeLink(googlePlayInput, "play.google.com");
 
+  if (!category || category.length > 100) return { error: "Choose a startup category." };
   if (!name || name.length > 100) return { error: "Enter a startup name of up to 100 characters." };
   if (websiteInput && !website) return { error: "Enter a website URL that starts with https:// or http://." };
   if (handle && !/^[A-Za-z0-9_]{1,15}$/.test(handle)) return { error: "Enter a valid X handle." };
@@ -130,6 +132,7 @@ export async function updateStartupDetails(id: string, _: ActionState, form: For
 
   const { data, error } = await supabase.from("startup_submissions").update({
     name,
+    category,
     website_url: website,
     description,
     x_handle: handle || null,
@@ -151,6 +154,7 @@ export async function updateStartupDetails(id: string, _: ActionState, form: For
   }).eq("id", id).eq("owner_id", owner).select("id").maybeSingle();
 
   if (error?.code === "23505") return { error: "You already have a draft for this website." };
+  if (error?.code === "23503") return { error: "Choose a valid startup category." };
   if (error || !data) return { error: "Couldn’t save your changes. Check your details and try again." };
   revalidatePath("/dashboard");
   revalidatePath(`/startup/${id}`);

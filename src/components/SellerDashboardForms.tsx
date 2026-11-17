@@ -194,7 +194,7 @@ export function SaleRequest({ id, requested }: { id: string; requested: boolean 
   const [state, action, pending] = useActionState(requestSaleListing.bind(null, id), {});
   return <form action={action} className="seller-listing-action">
     <button className="seller-button" disabled={pending || requested || Boolean(state.message)}>
-      {requested || state.message ? "Request saved" : pending ? "Saving…" : "Get started →"}
+      {requested || state.message ? "Request saved" : pending ? "Saving…" : "Request listing review"}
     </button>
     {state.error && <Result state={state} />}
   </form>;
