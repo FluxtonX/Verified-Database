@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { sellerUrl, type SellerLead, type SellerMessage } from "@/lib/seller-dashboard";
 import { Icon } from "./icons";
+import { AcquisitionAction } from "./BuyerForms";
+import { dollars } from "@/lib/catalog";
+import { inquiryLabels } from "@/lib/buyer-dashboard";
+import InboxRefresh from "./InboxRefresh";
 import { SellerArchive, SellerReply } from "./SellerDashboardForms";
 
 export function SellerInbox({ leads, thread, messages, archived, needsReply, timezone, failed }: {
@@ -24,7 +28,7 @@ export function SellerInbox({ leads, thread, messages, archived, needsReply, tim
     <section className="seller-inbox-list" aria-labelledby="seller-inbox-heading">
       <div className="dashboard-panel-header">
         <h1 id="seller-inbox-heading">Inbox</h1>
-        <div className="seller-inline">
+        <div className="seller-inline"><InboxRefresh />
           <Link className="seller-button seller-icon-button" aria-label={needsReply ? "Show all conversations" : "Show conversations awaiting reply"}
             title={needsReply ? "Show all conversations" : "Awaiting reply"}
             aria-current={needsReply ? "true" : undefined}
@@ -50,7 +54,12 @@ export function SellerInbox({ leads, thread, messages, archived, needsReply, tim
     <div className="seller-inbox-content">
       <section className="seller-messages" aria-label="Conversation">
         {thread ? <>
-          <div className="dashboard-panel-header"><h2>{thread.buyer_name}</h2>{thread.last_message_at && <SellerArchive id={thread.id} archived={thread.archived} />}</div>
+          <div className="dashboard-panel-header"><h2>{thread.buyer_name}</h2>{thread.last_message_at && <SellerArchive key={thread.id} id={thread.id} archived={thread.archived} />}</div>
+          <div className="buyer-inquiry-summary"><span className="status-pill">{inquiryLabels[thread.inquiry_status]}</span>
+            {thread.offer_cents && <strong>Offer {dollars.format(thread.offer_cents / 100)}</strong>}
+            {thread.inquiry_status === "open" && <><AcquisitionAction key={`${thread.id}:accepted`} id={thread.id} status="accepted" label="Discuss acquisition" /><AcquisitionAction key={`${thread.id}:declined`} id={thread.id} status="declined" label="Decline inquiry" /></>}
+            {thread.inquiry_status === "accepted" && <><AcquisitionAction key={`${thread.id}:completed`} id={thread.id} status="completed" label="Mark acquired" confirm="Confirm payment and ownership transfer are complete. This removes the listing from the marketplace." /><AcquisitionAction key={`${thread.id}:declined`} id={thread.id} status="declined" label="Close inquiry" /></>}
+          </div>
           <div className="seller-message-list">
             {messages.length ? messages.map(message => (
               <article className={message.sender === "seller" ? "seller-message from-seller" : "seller-message"} key={message.id}>
@@ -66,6 +75,7 @@ export function SellerInbox({ leads, thread, messages, archived, needsReply, tim
       <section className="seller-acquisition" aria-labelledby="seller-acquisition-heading">
         <div className="dashboard-panel-header"><h2 id="seller-acquisition-heading">Acquisition details</h2></div>
         {thread ? <dl><div><dt>Startup</dt><dd>{thread.startup_name}</dd></div><div><dt>Buyer</dt><dd>{thread.buyer_name}</dd></div>
+          <div><dt>Status</dt><dd>{inquiryLabels[thread.inquiry_status]}</dd></div>
           <div><dt>Interest recorded</dt><dd>{date.format(new Date(thread.created_at))}</dd></div></dl>
           : <p className="dashboard-empty">Select a conversation.</p>}
       </section>

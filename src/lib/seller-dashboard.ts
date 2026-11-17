@@ -14,6 +14,9 @@ export type SellerLead = {
   last_message_at: string | null;
   last_sender: "buyer" | "seller" | null;
   archived: boolean;
+  inquiry_at: string | null;
+  offer_cents: number | null;
+  inquiry_status: import("./buyer-dashboard").InquiryStatus;
 };
 
 export type SellerMessage = { id: string; sender: "buyer" | "seller"; body: string; created_at: string };

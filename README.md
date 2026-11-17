@@ -33,7 +33,28 @@ TrustMRR uses a public revenue leaderboard and acquisition cards that show 30-da
 
 1. **Current screens.** Home reads the top 100 published leaderboard entries, recent listings, best deals, and the latest six updates. Acquire reads the listings visible to the current account, with price, revenue, dates, audience and other filters. The database grants guest access only to listings marked for preview. Published projections redact anonymous company identity. Login supports Google sign-in and resumes the original startup submission flow after sign-in. [Supabase SSR](https://supabase.com/docs/guides/auth/server-side/creating-a-client?queryGroups=framework&framework=nextjs) · [Row level security](https://supabase.com/docs/guides/database/postgres/row-level-security)
 2. **Live acceptance.** After applying the migration, test the Google callback, sign-out, a guest versus a member’s marketplace results, saving a private draft from both entry points, and like persistence. Check draft isolation with two accounts. Live filters currently run over the listings fetched for the visible catalog. Move filtering, sorting and pagination into database queries as volume grows.
-3. **Verification and publishing.** Add Stripe authorization, server-side credential storage, source deduplication, a retryable sync job, and a review/publish workflow. Define refund handling, currency normalization and the recurring-revenue calculation before marking data verified. Founder submissions currently save drafts. Paid add-ons, buyer offers and messaging, and founder dashboard workflows belong to later phases.
+3. **Verification and publishing.** Sellers import Stripe or RevenueCat accounts into private startup drafts, edit details, and verify a selected provider again to publish. Publication reads fresh USD metrics on the server, matches the provider account to the selected source, and calls a service-role-only transaction. Editable saved draft metrics cannot be used to forge a public revenue snapshot. Provider keys are used once and are not stored. Only the selected source is published; currencies and providers are not combined. Revenue and MRR retain their separate meanings.
+
+## Buyer and seller workspaces
+
+Apply **all** migrations in filename order, including `supabase/migrations/20261117000000_buyer_marketplace.sql`, before using the new workspace. Set `SUPABASE_SECRET_KEY` on the server to enable verified publishing. Existing OAuth and provider imports remain in place.
+
+- `/dashboard?mode=buyer` opens the buyer overview. Buyers create a separate profile, set acquisition criteria, save listings, contact sellers, and track conversations and acquisition inquiries. Profile setup returns to the originating listing.
+- `/dashboard?mode=seller` opens the seller workspace. Existing drafts, profile editing, provider imports, private startup previews, feedback, and settings remain available. Sellers publish or withdraw listings and respond to buyer interest in their inbox.
+- `/acquire` supports search, filters, sorting, listing details, and persistent saves. `/acquire/[listing-id]` reads a redacted public projection. `/startup/[submission-id]` remains an owner-only preview.
+- Saves create interested-buyer leads. Removing an untouched save removes that lead; established conversations are retained. Buyers and sellers share the existing message tables, with participant access enforced in PostgreSQL. Inboxes refresh every 15 seconds while visible and have a manual refresh action.
+- Inquiries progress from sent to in discussion, declined, withdrawn, or acquired. Sellers confirm completion after payment and transfer have been arranged separately. Completion removes the listing from discovery and closes competing inquiries. The application does not process acquisition payments or transfer ownership.
+- Buyer notification preferences are persisted independently. Email delivery remains pending setup, as with seller notifications. Feedback is limited to ten messages per role.
+
+### Verification
+
+Run `npm test`, `npm run lint`, and `npm run build` with Node.js 22 or later. `tests/marketplace.sql` exercises real PostgreSQL permissions and workflows: profile isolation, anonymous listing redaction, save idempotency, two-way messages, spoofing prevention, inquiry transitions, completion, and feedback limits. Run it only against a disposable local Supabase database after applying all migrations:
+
+```sh
+psql "$LOCAL_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/marketplace.sql
+```
+
+The SQL test rolls back its fixtures. For release acceptance, use two test accounts to verify OAuth callbacks and connect test provider accounts to exercise fresh-provider publishing. Do not use production credentials or publish test businesses into the live catalog.
 
 ## Sponsorship checkout
 Apply the sponsorship migration to load the starter cards and inventory. Set `SUPABASE_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_SPONSOR_PRICE_ID`, and `STRIPE_SPONSOR_WEBHOOK_SECRET` on the server. Set the ID of an active, fixed-price USD Price that bills every month. The app displays the amount returned by Stripe. Enable subscription cancellation in the Stripe customer portal.

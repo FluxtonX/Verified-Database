@@ -1,18 +1,18 @@
-/* eslint-disable @next/next/no-img-element */
-
 import type { Metadata } from "next";
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import BuyerDashboard, { WorkspaceHeading } from "@/components/BuyerDashboard";
+import PublishListing, { type Publication } from "@/components/PublishListing";
+import { buyerTabs, buyerUrl, listingReturn } from "@/lib/buyer-dashboard";
 import DashboardAddStartup from "@/components/DashboardAddStartup";
 import StartupDetailsForm, { type StartupDetails } from "@/components/StartupDetailsForm";
 import StartupLogo from "@/components/StartupLogo";
 import { createSupabase } from "@/lib/supabase/server";
-import { signOut } from "@/app/login/actions";
-import { Icon, type IconName } from "@/components/icons";
-import DashboardModeSwitch from "@/components/DashboardModeSwitch";
+import { Icon } from "@/components/icons";
+import DashboardShell from "@/components/DashboardShell";
 import { InterestedBuyers, SellerInbox } from "@/components/SellerInbox";
-import { SaleRequest, SellerFeedback, SellerProfileForm, SellerSettings, SellerSocials } from "@/components/SellerDashboardForms";
+import { SellerFeedback, SellerProfileForm, SellerSettings, SellerSocials } from "@/components/SellerDashboardForms";
 import { sellerTabs, sellerUrl, type DashboardMode, type SellerTab, type SellerLead, type SellerMessage, type SellerProfile } from "@/lib/seller-dashboard";
 import { startupDetailsColumns } from "@/lib/startup-details";
 import { providerNames, type PaymentSource } from "@/lib/startup-metrics";
@@ -23,50 +23,27 @@ export const metadata: Metadata = { title: "Dashboard | VerifedDB" };
 type Draft = StartupDetails & { startup_payment_sources: PaymentSource[]; wants_sale: boolean };
 
 type Supabase = NonNullable<Awaited<ReturnType<typeof createSupabase>>>;
-const links: { tab: SellerTab; name: string; icon: IconName }[] = [
-  { tab: "chat", name: "Inbox", icon: "inbox" },
-  { tab: "interested", name: "Interested", icon: "heart" },
-  { tab: "my-startups", name: "My startups", icon: "building" },
-  { tab: "my-profile", name: "My profile", icon: "profile" },
-  { tab: "settings", name: "Settings", icon: "settings" },
-  { tab: "feedback", name: "Feedback", icon: "bulb" },
-];
-
-type DashboardParams = { startup?: string; mode?: string; tab?: string; thread?: string; folder?: string; filter?: string };
+type DashboardParams = { startup?: string; mode?: string; tab?: string; thread?: string; folder?: string; filter?: string; view?: string; returnTo?: string };
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<DashboardParams> }) {
   const [supabase, params] = await Promise.all([createSupabase(), searchParams]);
   const session = await supabase?.auth.getClaims();
   const claims = session?.data?.claims;
-  if (!supabase || !claims?.sub) redirect("/login?next=%2Fdashboard");
-
   const mode: DashboardMode = params.mode === "buyer" && !params.startup ? "buyer" : "seller";
   const tab = sellerTabs.find(item => item === params.tab) ?? "my-startups";
+  const buyerTab = buyerTabs.find(item => item === params.tab) ?? "overview";
+  if (!supabase || !claims?.sub) {
+    const returnTo = listingReturn(params.returnTo);
+    const destination = mode === "buyer" ? buyerUrl(buyerTab, {
+      ...(params.thread && { thread: params.thread }), ...(returnTo && { returnTo }),
+    }) : sellerUrl(tab, params.startup ? { startup: params.startup } : {});
+    redirect(`/login?next=${encodeURIComponent(destination)}`);
+  }
   const email = typeof claims.email === "string" ? claims.email : "";
-  return <div className="seller-dashboard">
-    <aside className="dashboard-sidebar">
-      <div className="dashboard-sidebar-top">
-        <Link href="/" className="dashboard-brand"><img src="/assets/reference-0.webp" width="22" height="22" alt="" />VerifedDB</Link>
-        <DashboardModeSwitch mode={mode} />
-      </div>
-      <nav aria-label="Dashboard">
-        {mode === "seller" ? links.map(link => <Link key={link.tab} href={sellerUrl(link.tab)} aria-current={tab === link.tab ? "page" : undefined}>
-          <Icon name={link.icon} size={17} />{link.name}
-        </Link>) : <Link href="/acquire"><Icon name="search" size={17} />Marketplace</Link>}
-      </nav>
-      <div className="dashboard-sidebar-account"><div>
-        <small>Signed in as</small>
-        <p title={email}>{email || "VerifedDB member"}</p>
-        <form action={signOut}><button className="seller-button" type="submit"><Icon name="logout" size={16} />Log out</button></form>
-      </div></div>
-    </aside>
-    <main className="dashboard-main">
-      {mode === "buyer" ? <section className="seller-section seller-narrow">
-        <h1>Buyer dashboard</h1><div className="seller-card"><h2>Browse startups</h2><p className="muted">Explore available listings in the marketplace.</p>
-          <Link className="startup-submit" href="/acquire">Browse marketplace</Link></div>
-      </section> : <SellerContent supabase={supabase} owner={claims.sub} tab={tab} params={params} email={email} />}
-    </main>
-  </div>;
+  return <DashboardShell mode={mode} active={mode === "buyer" ? buyerTab : tab} email={email}>
+    {mode === "buyer" ? <BuyerDashboard supabase={supabase} owner={claims.sub} tab={buyerTab} threadId={params.thread} view={params.view} returnTo={params.returnTo} />
+      : <SellerContent supabase={supabase} owner={claims.sub} tab={tab} params={params} email={email} />}
+  </DashboardShell>;
 }
 
 async function SellerContent({ supabase, owner, tab, params, email }: {
@@ -77,7 +54,7 @@ async function SellerContent({ supabase, owner, tab, params, email }: {
     case "interested": {
       const archived = params.folder === "archive";
       const needsReply = params.filter === "reply";
-      const base = supabase.from("seller_leads").select("id,buyer_name,startup_name,created_at,last_message_at,last_sender,archived");
+      const base = supabase.from("seller_leads").select("id,buyer_name,startup_name,created_at,last_message_at,last_sender,archived,inquiry_at,offer_cents,inquiry_status").eq("seller_id", owner);
       const list = tab === "interested" ? base.is("last_message_at", null).eq("archived", false).order("created_at", { ascending: false })
         : base.not("last_message_at", "is", null).eq("archived", archived).order("last_message_at", { ascending: false });
       if (tab === "chat" && needsReply) list.eq("last_sender", "buyer");
@@ -87,7 +64,7 @@ async function SellerContent({ supabase, owner, tab, params, email }: {
       const threadId = params.thread;
       let thread = leads.find(lead => lead.id === threadId);
       if (!thread && threadId && /^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/i.test(threadId)) {
-        const selected = await supabase.from("seller_leads").select("id,buyer_name,startup_name,created_at,last_message_at,last_sender,archived").eq("id", threadId).maybeSingle<SellerLead>();
+        const selected = await supabase.from("seller_leads").select("id,buyer_name,startup_name,created_at,last_message_at,last_sender,archived,inquiry_at,offer_cents,inquiry_status").eq("seller_id", owner).eq("id", threadId).maybeSingle<SellerLead>();
         thread = selected.data ?? undefined;
       }
       const [conversation, settings] = await Promise.all([
@@ -133,6 +110,10 @@ async function SellerStartups({ supabase, owner, selected }: { supabase: Supabas
     .select(`${startupDetailsColumns},wants_sale,startup_payment_sources(id,provider,name,synced_at)`)
     .eq("owner_id", owner).order("created_at", { ascending: false }).returns<Draft[]>();
   const drafts = data ?? [];
+  const [publications, categories] = await Promise.all([
+    supabase.from("seller_publications").select("*").in("submission_id", drafts.map(draft => draft.id)).returns<Publication[]>(),
+    supabase.from("categories").select("name").order("name"),
+  ]);
   const { data: signedLogos } = drafts.length
     ? await supabase.storage.from(startupLogoBucket).createSignedUrls(
       drafts.map(draft => startupLogoPath(owner, draft.id)), 3600, { cacheNonce: randomUUID() },
@@ -144,11 +125,11 @@ async function SellerStartups({ supabase, owner, selected }: { supabase: Supabas
 
 
   return (
+      <div className="seller-startups-page"><WorkspaceHeading eyebrow="SELLER WORKSPACE" title="Your businesses, in good company" description="Manage your startups and find their next owner."><DashboardAddStartup /></WorkspaceHeading>
       <div className="dashboard-workspace">
         <section className="dashboard-startups" aria-labelledby="dashboard-startups-title">
           <div className="dashboard-panel-header">
-            <h1 id="dashboard-startups-title">My startups</h1>
-            <DashboardAddStartup />
+            <h2 id="dashboard-startups-title">My startups</h2>
           </div>
           {!drafts.length && !error && <p className="dashboard-empty">No startups yet.</p>}
           {drafts.map(draft => (
@@ -172,10 +153,7 @@ async function SellerStartups({ supabase, owner, selected }: { supabase: Supabas
                   <div><strong>Showcase your startup</strong><p>Preview your startup page and its revenue metrics.</p></div>
                   <Link href={`/startup/${startup.id}`}>View page →</Link>
                 </div>
-                <div className="seller-startup-banner seller-startup-green"><span aria-hidden="true">$</span>
-                  <div><strong>Sell your startup?</strong><p>Save a request to list your startup on the marketplace.</p></div>
-                  <SaleRequest id={startup.id} requested={startup.wants_sale} key={startup.id} />
-                </div>
+                {publications.error ? <p className="dashboard-empty" role="alert">Couldn’t load listing status. Apply the marketplace migration, then refresh.</p> : <PublishListing id={startup.id} requested={startup.wants_sale} sources={startup.startup_payment_sources} publication={publications.data?.find(item => item.submission_id === startup.id)} key={`publish:${startup.id}`} />}
                 <div className="dashboard-status dashboard-sources">
                   <div>
                     <strong>Payment providers</strong>
@@ -186,10 +164,10 @@ async function SellerStartups({ supabase, owner, selected }: { supabase: Supabas
                   </div>
                   <DashboardAddStartup startupId={startup.id} key={startup.id} />
                 </div>
-                <StartupDetailsForm key={startup.id} startup={startup} logoUrl={logoFor(startup)} />
+                <StartupDetailsForm key={startup.id} startup={startup} logoUrl={logoFor(startup)} categories={categories.data?.map(item => item.name)} />
               </>
             ) : <p className="dashboard-empty">Connect Stripe or RevenueCat to add your first startup.</p>}
         </section>
-      </div>
+      </div></div>
   );
 }

@@ -24,6 +24,20 @@ export const dayMs = 86_400_000;
 export const historyDays = 90;
 export const isoDay = (timestamp: number) => new Date(timestamp).toISOString().slice(0, 10);
 
+// Use only a newly fetched, single-provider USD snapshot when publishing.
+// Missing daily history is different from a complete history with zero revenue.
+export function listingSnapshot(metrics: ProviderMetrics, timestamp: number) {
+  const usd = metrics.currencies.USD;
+  if (!usd?.daily || !Number.isFinite(timestamp)) return null;
+  const daily = Array.from({ length: 30 }, (_, index) => usd.daily?.[isoDay(timestamp - index * dayMs)] ?? 0);
+  if (daily.some(amount => !Number.isFinite(amount))) return null;
+  const revenue = daily.reduce((sum, amount) => sum + amount, 0);
+  const cents = (amount: number) => Math.round(amount * 100);
+  if (revenue < 0 || !Number.isSafeInteger(cents(revenue)) || (usd.mrr !== null &&
+    (!Number.isFinite(usd.mrr) || usd.mrr < 0 || !Number.isSafeInteger(cents(usd.mrr))))) return null;
+  return { revenueCents: cents(revenue), mrrCents: usd.mrr === null ? null : cents(usd.mrr) };
+}
+
 export function currencyAmount(value: number, currency: string, rounded = false) {
   const whole = rounded && (value === 0 || Math.abs(value) >= 1);
   return new Intl.NumberFormat("en-US", {

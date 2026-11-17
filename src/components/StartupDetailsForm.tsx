@@ -8,6 +8,7 @@ import StartupLogoPicker from "./StartupLogoPicker";
 export type StartupDetails = {
   id: string;
   name: string;
+  category: string;
   description: string;
   website_url: string | null;
   x_handle: string | null;
@@ -30,7 +31,7 @@ export type StartupDetails = {
   imported_logo_url: string | null;
 };
 
-export default function StartupDetailsForm({ startup, logoUrl }: { startup: StartupDetails; logoUrl?: string }) {
+export default function StartupDetailsForm({ startup, logoUrl, categories = [] }: { startup: StartupDetails; logoUrl?: string; categories?: string[] }) {
   const [state, action, pending] = useActionState(updateStartupDetails.bind(null, startup.id), {});
 
   const [mobile, setMobile] = useState(startup.mobile_app);
@@ -49,6 +50,7 @@ export default function StartupDetailsForm({ startup, logoUrl }: { startup: Star
         </div>
       </div>
 
+      <label>Category<select name="category" defaultValue={startup.category} required>{[...new Set([startup.category, ...categories])].map(category => <option key={category}>{category}</option>)}</select></label>
       <label>Website URL <input name="website" type="url" defaultValue={startup.website_url ?? ""} maxLength={2048} placeholder="https://example.com" /></label>
       <div className="dashboard-app-stores">
         <label className="dashboard-mobile"><span>My product is a mobile app</span><input name="mobile-app" type="checkbox" checked={mobile} onChange={event => setMobile(event.target.checked)} /></label>
@@ -95,6 +97,7 @@ export default function StartupDetailsForm({ startup, logoUrl }: { startup: Star
         </div>
       </fieldset>
 
+      <p className="muted">Changes update your draft. Verify and publish again to update a live marketplace listing.</p>
       <div className="dashboard-save">
         {state.error && <p role="alert">{state.error}</p>}
         {state.saved && <p role="status">Changes saved.</p>}

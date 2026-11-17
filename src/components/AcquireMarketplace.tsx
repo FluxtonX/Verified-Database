@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "./icons";
 import SponsorRail from "./SponsorRail";
+import MarketplaceListingCard from "./MarketplaceListingCard";
 import AddStartupModal from "./AddStartupModal";
 import providers from "@/data/providers.json";
 import founders from "@/data/acquire-founders.json";
@@ -25,32 +26,6 @@ const countryNames = new Intl.DisplayNames("en", { type: "region" });
 
 function Brand() {
   return <Link href="/" className="brand" aria-label="VerifedDB home"><img className="brand-star" src="/assets/reference-0.webp" width="24" height="24" alt="" /><span>VerifedDB</span></Link>;
-}
-
-function EyeIcon() {
-  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></svg>;
-}
-
-function OfferIcon() {
-  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="8" cy="5" r="2" /><path d="m2 13 4-4 4 2 4-3 3 3-6 6-4-1m-5 3 5 3 9-5 6-6-3-2m-8 5 3 1" /></svg>;
-}
-
-function MarketplaceCard({ startup }: { startup: Startup }) {
-  return <article className={`marketplace-card${startup.featured ? " promoted" : ""}`}>
-    <div className="marketplace-card-activity"><EyeIcon /><span>{startup.views}</span><OfferIcon /><span>{startup.offers}</span></div>
-    <div className="marketplace-card-body">
-      <div className="marketplace-card-identity">
-        {startup.logo ? <img className="marketplace-logo" src={startup.logo} alt="" width="48" height="48" /> : <span className="marketplace-logo fallback-logo">{startup.name[0]}</span>}
-        <div><h2 className={startup.private ? "private" : ""}>{startup.name}</h2><span className="marketplace-category">{startup.category}</span></div>
-      </div>
-      <p className="marketplace-description">{startup.description}</p>
-    </div>
-    <dl className="marketplace-metrics">
-      <div><dt>Revenue (30d)</dt><dd>{startup.revenueLabel}{startup.growth !== null && <span className={startup.growth < 0 ? "negative" : "positive"}>{startup.growth < 0 ? "↓" : "↑"}{Math.abs(startup.growth)}%</span>}</dd></div>
-      <div><dt>Asking price</dt><dd>{startup.oldPrice && <del>{startup.oldPrice}</del>}{startup.priceLabel}</dd></div>
-      <div><dt>Multiple</dt><dd>{startup.multiple === null ? "—" : `${startup.multiple.toFixed(1)}x`}</dd></div>
-    </dl>
-  </article>;
 }
 
 function RangeField({ label, percentage, value, onChange }: {
@@ -83,7 +58,11 @@ function FounderTestimonials() {
   </article>)}</div></section>;
 }
 
-export default function AcquireMarketplace({ listings, configured, failed, categories, signedIn, openSubmission, sponsors, sponsorPrice, sponsorCheckout }: {
+export default function AcquireMarketplace({ listings, configured, failed, categories, signedIn, openSubmission, sponsors, sponsorPrice, sponsorCheckout, savedIds = [], ownedIds = [], buyerReady = false, buyerActivityFailed = false }: {
+  savedIds?: string[];
+  ownedIds?: string[];
+  buyerReady?: boolean;
+  buyerActivityFailed?: boolean;
   listings: Startup[] | null;
   configured: boolean;
   failed: boolean;
@@ -94,6 +73,7 @@ export default function AcquireMarketplace({ listings, configured, failed, categ
   sponsorPrice: SponsorPrice | null;
   sponsorCheckout: boolean;
 }) {
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("default");
   const [category, setCategory] = useState("Select categories...");
@@ -161,14 +141,15 @@ export default function AcquireMarketplace({ listings, configured, failed, categ
   return <>
     <SponsorRail catalog={sponsors} price={sponsorPrice} enabled={sponsorCheckout} marketplace />
     <main className="page acquire-page"><div className="acquire-container">
-      <header className="acquire-hero"><Brand /><h1>Acquire Profitable Startups</h1>
-        <p>Buy and sell SaaS, mobile apps, and digital businesses on a marketplace with payment-provider revenue verification.</p>
+      <nav className="marketplace-nav" aria-label="Marketplace navigation"><Brand /><div><Link href="/">Leaderboard</Link><Link className="seller-button" href={signedIn ? "/dashboard?mode=buyer" : "/login?next=%2Fdashboard%3Fmode%3Dbuyer"}>{signedIn ? "My workspace" : "Sign in"}<Icon name="chevron" size={14} /></Link></div></nav>
+      <header className="acquire-hero"><span className="workspace-eyebrow">THE ACQUISITION MARKETPLACE</span><h1>Acquire Profitable Startups</h1>
+        <p>Discover SaaS, apps, and digital businesses with provider-verified revenue.</p>
         {!configured && <div className="marketplace-providers">{providers.map(provider => <img src={provider.logo} alt={provider.name} title={provider.name} width="20" height="20" key={provider.name} />)}</div>}
         <div className="hero-actions"><label className="search-box"><Icon name="search" size={20} /><input aria-label="Search marketplace startups" placeholder="Search startups" value={query} onChange={e => setQuery(e.target.value)} /></label><button ref={sellButtonRef} className="add-startup" onClick={() => setShowModal(true)}><Icon name="plus" size={20} />Sell startup</button></div>
       </header>
 
       <div className="marketplace-layout">
-        <aside className="marketplace-filters" aria-label="Marketplace filters"><h2>FILTERS</h2><div className="marketplace-filter-panel">
+        <aside className="marketplace-filters" aria-label="Marketplace filters"><div className="marketplace-filter-heading"><h2>Refine your search</h2><button type="button" className="seller-button marketplace-filter-toggle" aria-expanded={filtersOpen} aria-controls="marketplace-filter-panel" onClick={() => setFiltersOpen(!filtersOpen)}><Icon name="filter" size={16} />Filters</button><button className="text-link" type="button" onClick={() => { setQuery(""); setCategory("Select categories..."); setRanges({}); setSelections({}); setSort("default"); setLimit(24); }}>Reset</button></div><div id="marketplace-filter-panel" className={`marketplace-filter-panel${filtersOpen ? " filters-open" : ""}`}>
           <FilterSelect label="Categories" options={["Select categories...", ...categoryOptions]} value={category} onChange={setCategory} />
           {["Revenue (last 30 days)", "MRR", "Growth (last 30 days)", "Asking Price"].map(label => <RangeField label={label} percentage={label.startsWith("Growth")} key={label} value={ranges[label] || ["", ""]} onChange={value => setRanges(current => ({ ...current, [label]: value }))} />)}
           <FilterSelect label="Max Multiple" options={["Any multiple", "1x", "2x", "3x", "5x", "10x"]} value={selections["Max Multiple"] || "Any multiple"} onChange={value => setSelection("Max Multiple", value)} />
@@ -184,12 +165,13 @@ export default function AcquireMarketplace({ listings, configured, failed, categ
         <div className="marketplace-results"><div className="marketplace-results-toolbar"><p>{startups.length} startups found</p>
           <details className="marketplace-sort" ref={sortRef}><summary>{marketplaceSorts.find(option => option[0] === sort)?.[1]}<span className="select-chevron" /></summary><div className="marketplace-sort-options">{marketplaceSorts.map(([value, label]) => <button key={value} type="button" onClick={() => { setSort(value); sortRef.current?.removeAttribute("open"); }} className={sort === value ? "selected" : ""}>{label}{sort === value && <span>✓</span>}</button>)}</div></details>
         </div>
+        {buyerActivityFailed && <p role="alert">Couldn’t load your saved startups. Refresh to try again.</p>}
         {failed && <p role="alert">Some marketplace data is temporarily unavailable.</p>}
-        <div className="marketplace-card-grid">{startups.slice(0, limit).map(startup => <MarketplaceCard startup={startup} key={startup.id} />)}</div>
+        <div className="marketplace-card-grid">{startups.slice(0, limit).map(startup => <MarketplaceListingCard startup={startup} key={startup.id} saved={savedIds.includes(startup.id)} owned={ownedIds.includes(startup.id)} signedIn={signedIn} ready={buyerReady} sample={!configured} />)}</div>
         {!startups.length && !failed && <p className="marketplace-empty">No startups match these filters.</p>}
         {startups.length > limit && <div className="load-more"><button onClick={() => setLimit(limit + 24)}>Show more</button></div>}
         {!signedIn && <section className="marketplace-locked" aria-labelledby="marketplace-gate-title">
-          <div className="marketplace-card-grid locked-card-grid" aria-hidden="true" inert>{demoListings.slice(0, 4).map((startup, index) => <MarketplaceCard key={startup.id} startup={{ ...startup, name: ["Get Founders", "Unnamed Company", "Figmentor", "Private Startup"][index], featured: index === 0 }} />)}</div>
+          <div className="marketplace-card-grid locked-card-grid" aria-hidden="true" inert>{demoListings.slice(0, 4).map((startup, index) => <MarketplaceListingCard key={startup.id} sample startup={{ ...startup, name: ["Get Founders", "Unnamed Company", "Figmentor", "Private Startup"][index], featured: index === 0 }} />)}</div>
           <div className="marketplace-gate"><span className="marketplace-lock"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><rect x="3" y="10" width="18" height="12" rx="2" /><path d="M7 10V6a5 5 0 0 1 10 0v4" /></svg></span><h2 id="marketplace-gate-title">Browse the full marketplace</h2><p>Create a free account to see all available listings.</p><Link href="/login" className="marketplace-account-link">Create free account</Link><Link href="/login" className="marketplace-affiliate-link">Become an affiliate <span>→</span></Link></div>
         </section>}
         {!configured && <FounderTestimonials />}
