@@ -60,6 +60,8 @@ The SQL test rolls back its fixtures. For release acceptance, use two test accou
 
 Apply the sponsorship migration to load the starter cards and inventory. Set `SUPABASE_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_SPONSOR_PRICE_ID`, and `STRIPE_SPONSOR_WEBHOOK_SECRET` on the server. Set the ID of an active, fixed-price USD Price that bills every month. The app displays the amount returned by Stripe. Enable subscription cancellation in the Stripe customer portal.
 
+Apply `20261117000001_sponsor_logos.sql` to create the public sponsor logo storage bucket. A sponsor must provide an HTTPS logo URL or upload a PNG, JPG, or WebP file up to 800 KB before publishing or updating a card. Uploaded files are stored in Supabase Storage; the sponsor can replace one with another file or a URL.
+
 Register `/api/stripe/sponsorship` for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.paused`, and `customer.subscription.resumed`. Use Stripe test credentials and a separate Supabase project or local database to exercise checkout without publishing test sponsors to the live site.
 
 Sponsor cards on home, marketplace, and mobile automatically add `utm_source=verifeddb&utm_medium=referral&utm_campaign=sponsor_card` at render time, so existing catalog records work without a database migration. Old UTM tags are replaced; landing-page paths, fragments, and legitimate partner parameters are preserved. The copied Higgsfield `/marclou` destination and reference `ref=trustmrr` attribution are removed. Use a partner URL issued to VerifedDB if affiliate attribution is required.

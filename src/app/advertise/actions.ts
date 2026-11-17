@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { appOrigin } from "@/lib/supabase/config";
 import type { Sponsorship } from "@/lib/sponsorship";
+import { sponsorLogoBucket, sponsorLogoImage, sponsorLogoPath, storedSponsorLogoPath } from "@/lib/sponsor-logo";
 import {
   ownedSponsorship, readSponsorPrice, sponsorAccount, sponsorAdmin, sponsorCheckoutEnabled, stripeRequest,
   syncSponsorCheckout, type Checkout,
@@ -79,18 +80,44 @@ export async function publishSponsor(form: FormData) {
   const name = String(form.get("name") ?? "").trim();
   const headline = String(form.get("headline") ?? "").trim();
   const websiteUrl = sponsorUrl(form.get("website"));
-  const logo = String(form.get("logo") ?? "").trim();
-  const logoUrl = logo ? sponsorUrl(logo, true) : null;
-  if (!name || name.length > 60 || !headline || headline.length > 150 || !websiteUrl || (logo && !logoUrl)) {
+  const logoInput = form.get("logo");
+  const logoFile = form.get("logoFile");
+  const hasFile = logoFile instanceof File && logoFile.size > 0;
+  const extension = hasFile ? await sponsorLogoImage(logoFile) : null;
+  if (hasFile && !extension) redirect("/advertise?error=logo-file");
+  const logo = typeof logoInput === "string" ? logoInput.trim() : "";
+  const externalLogoUrl = !hasFile && logo ? sponsorUrl(logo, true) : null;
+  if (!name || name.length > 60 || !headline || headline.length > 150 || !websiteUrl || (!hasFile && logo && !externalLogoUrl)) {
     redirect("/advertise?error=details");
   }
 
   const admin = sponsorAdmin();
   if (!admin) redirect("/advertise?error=unavailable");
+  const current = await ownedSponsorship(admin, user.id);
+  if (current?.state !== "active") redirect("/advertise?error=publish");
+  if (!hasFile && !externalLogoUrl) redirect("/advertise?error=details");
+
+  let logoUrl = externalLogoUrl;
+  let uploadedPath: string | null = null;
+  const bucket = admin.storage.from(sponsorLogoBucket);
+  if (hasFile && extension) {
+    uploadedPath = sponsorLogoPath(current.id, extension);
+    const { error: uploadError } = await bucket.upload(uploadedPath, logoFile as File, {
+      contentType: (logoFile as File).type,
+      cacheControl: "31536000",
+    });
+    if (uploadError) redirect("/advertise?error=logo-upload");
+    logoUrl = bucket.getPublicUrl(uploadedPath).data.publicUrl;
+  }
   const { data, error } = await admin.from("sponsorships").update({
     name, headline, website_url: websiteUrl, logo_url: logoUrl,
-  }).eq("owner_id", user.id).eq("state", "active").select("id").maybeSingle();
-  if (error || !data) redirect("/advertise?error=publish");
+  }).eq("id", current.id).eq("owner_id", user.id).eq("state", "active").select("id").maybeSingle();
+  if (error || !data) {
+    if (uploadedPath) await bucket.remove([uploadedPath]);
+    redirect("/advertise?error=publish");
+  }
+  const previousPath = storedSponsorLogoPath(current.logo_url, process.env.NEXT_PUBLIC_SUPABASE_URL ?? "", current.id);
+  if (previousPath && previousPath !== uploadedPath && current.logo_url !== logoUrl) await bucket.remove([previousPath]);
   revalidatePath("/");
   revalidatePath("/acquire");
   redirect(`/?publishedSponsor=${encodeURIComponent(data.id)}`);

@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { SponsorOffer } from "@/components/SponsorOffer";
+import { SponsorDetailsForm } from "@/components/SponsorDetailsForm";
 import { createSupabase } from "@/lib/supabase/server";
 import {
   ownedSponsorship, readSponsorCatalog, readSponsorPrice, sponsorAccount, sponsorAdmin, sponsorCheckoutEnabled, stripeRequest,
   syncSponsorCheckout, type Checkout,
 } from "@/lib/sponsor-billing";
-import { openSponsorBilling, publishSponsor, startSponsorCheckout } from "./actions";
+import { openSponsorBilling, startSponsorCheckout } from "./actions";
 
 export const metadata = { title: "Advertise | VerifedDB" };
 
@@ -14,7 +15,9 @@ const errors: Record<string, string> = {
   "sold-out": "All spots are reserved. Check back for availability.",
   "price-changed": "The sponsorship price changed. Review the current price below.",
   checkout: "Couldn’t open Stripe Checkout. Please try again.",
-  details: "Enter a valid name, description, website, and optional HTTPS logo URL.",
+  details: "Enter a valid name, description, website, and logo URL or image file.",
+  "logo-file": "Choose a PNG, JPG, or WebP image under 800 KB.",
+  "logo-upload": "Couldn’t upload your logo. Please try again.",
   publish: "Couldn’t publish your card. Check that your sponsorship is active and try again.",
   billing: "Couldn’t open Stripe billing. Please try again.",
 };
@@ -52,14 +55,7 @@ export default async function AdvertisePage({ searchParams }: {
       {failed && <p role="alert">Couldn’t check your sponsorship. Refresh to try again.</p>}
       {sponsorship?.state === "active" && <>
         <p className="sponsor-description">Your spot is reserved. Add or update the details people will see on your sponsor card.</p>
-        <form action={publishSponsor} className="sponsor-details">
-          <label>Startup name<input name="name" maxLength={60} defaultValue={sponsorship.name ?? ""} required /></label>
-          <label>Short description<textarea name="headline" maxLength={150} rows={3} defaultValue={sponsorship.headline ?? ""} required /></label>
-          <label>Website URL<input type="url" name="website" maxLength={2048} placeholder="https://example.com" defaultValue={sponsorship.website_url ?? ""} required /></label>
-          <p className="muted">VerifedDB referral tags are added automatically to sponsor-card links. Use your own landing page or partner URL.</p>
-          <label>Logo URL (optional)<input type="url" name="logo" maxLength={2048} placeholder="https://example.com/logo.png" defaultValue={sponsorship.logo_url ?? ""} /></label>
-          <button className="add-startup sponsor-primary">{sponsorship.name ? "Save sponsor card" : "Publish sponsor card"}</button>
-        </form>
+        <SponsorDetailsForm sponsorship={sponsorship} />
       </>}
       {sponsorship?.state === "paused" && <p>Your card is paused. Open Stripe billing to check your subscription.</p>}
       {sponsorship?.stripe_customer_id && <form action={openSponsorBilling}><button className="seller-button">Manage Stripe billing <span aria-hidden="true">↗</span></button></form>}

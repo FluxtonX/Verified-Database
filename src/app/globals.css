@@ -971,6 +971,12 @@ footer{text-align:center;padding:64px 0 8px;color:var(--muted)}footer h2{font-si
 .sponsor-details { display: grid; gap: 14px; margin: 20px 0; }
 .sponsor-details label { display: grid; gap: 4px; }
 .sponsor-details :is(input, textarea) { width: 100%; min-width: 0; font: inherit; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; }
+.sponsor-logo-fields { display: grid; gap: 8px; }
+.sponsor-logo-fields > strong { font-weight: 600; }
+.sponsor-logo-fields > .muted { font-size: 13px; }
+.sponsor-logo-current { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
+.sponsor-logo-current img { width: 48px; height: 48px; border: 1px solid var(--border); border-radius: 8px; object-fit: contain; }
+.sponsor-logo-fields input[type="file"] { background: #fafafa; }
 @media (max-width: 1023px) {
   .sponsor-mobile { display: flex; align-items: stretch; gap: 8px; padding: 12px 16px 0; max-width: 700px; margin: 0 auto; }
   .sponsor-mobile .sponsor-card { flex: 1; min-width: 0; }
