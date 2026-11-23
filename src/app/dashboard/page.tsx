@@ -81,14 +81,15 @@ async function SellerContent({ supabase, owner, tab, params, email }: {
         supabase.from("profiles").select("display_name,avatar_url,x_handle,bio,linkedin_url,notify_messages,notify_saved,timezone,deletion_requested_at").eq("id", owner).maybeSingle<SellerProfile>(),
         tab === "my-profile" ? supabase.auth.getUser() : null,
       ]);
-      if (error) return <p className="seller-section" role="alert">Couldn’t load your account settings. Refresh to try again.</p>;
-      if (tab === "settings") return <section className="seller-section seller-narrow">
-        <h1>Settings</h1><p className="seller-description">Manage your account preferences and notifications.</p>
+      if (error) return <section className="workspace-page"><p className="seller-card" role="alert">Couldn’t load your account settings. Refresh to try again.</p></section>;
+      if (tab === "settings") return <section className="workspace-page workspace-form-page">
+        <WorkspaceHeading eyebrow="PREFERENCES" title="Settings" description="Notifications, timezone and your account." />
         <div className="seller-stack"><SellerSettings email={email} profile={profile} /></div>
       </section>;
       const emailVerified = Boolean(auth?.data.user?.email_confirmed_at);
-      return <section className="seller-section seller-profile-page seller-stack" aria-label="My profile">
-        <div className="seller-notice"><Icon name="shield" size={22} /><div><h2>Account verification</h2>
+      return <section className="workspace-page workspace-form-page seller-profile-page" aria-label="My profile">
+        <WorkspaceHeading eyebrow="SELLER IDENTITY" title="My profile" description="Buyers see this when you talk about a deal. A real name and links build trust fast." />
+        <div className={`seller-notice${emailVerified ? " seller-notice-ok" : ""}`}><Icon name="shield" size={22} /><div><h2>Account verification</h2>
           <p>{emailVerified ? "Your email address is verified." : "Confirm your email address to verify account access."}</p></div>
           {emailVerified && <span className="seller-verification-badge"><Icon name="check" size={15} />Email verified</span>}
         </div>
@@ -97,7 +98,7 @@ async function SellerContent({ supabase, owner, tab, params, email }: {
     }
     case "feedback": {
       const { count, error } = await supabase.from("seller_feedback").select("slot", { count: "exact", head: true });
-      return <section className="seller-section seller-narrow"><h1>Feedback</h1>
+      return <section className="workspace-page workspace-form-page"><WorkspaceHeading eyebrow="YOUR IDEAS" title="Feedback" description="Tell us what would make selling on VerifedDB easier." />
         {error ? <p className="seller-card" role="alert">Couldn’t load the feedback form. Refresh to try again.</p> : <SellerFeedback sent={count ?? 0} />}
       </section>;
     }

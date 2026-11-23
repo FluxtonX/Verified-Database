@@ -256,3 +256,99 @@
 .profile-discover { padding: 28px; border-radius: 18px; background: var(--ink); color: #fff; align-items: center; }
 .profile-discover a { color: var(--lime); text-decoration: none; font-weight: 600; }
 @media (max-width: 600px) { .startup-profile-page { padding: 24px 16px 0; } .profile-stat dd { font-size: 20px; } }
+
+/* ---------- Signed-in workspace: inboxes ---------- */
+.inbox-page { max-width: 1360px; }
+.inbox-page .workspace-heading { margin-bottom: 20px; }
+.marketplace-workspace .seller-inbox, .seller-inbox { display: grid; grid-template-columns: 300px minmax(0, 1fr) 280px; margin: 0; min-height: calc(100dvh - 250px); border: 1px solid var(--line); border-radius: 20px; background: var(--card); overflow: hidden; }
+.buyer-inbox { grid-template-columns: 300px minmax(0, 1fr); min-height: calc(100dvh - 250px); border-radius: 20px; }
+.seller-inbox-list, .buyer-thread-list { display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--line); background: var(--card); }
+.inbox-list-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px; border-bottom: 1px solid var(--line); }
+.inbox-segmented { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 11px; background: var(--paper); }
+.inbox-segmented a { padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.inbox-segmented a[aria-current="page"] { background: var(--ink); color: #fff; }
+.inbox-filter { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; font-size: 12.5px; font-weight: 500; color: var(--ink-2); white-space: nowrap; }
+.inbox-filter:hover { border-color: var(--ink-3); color: var(--ink); }
+.inbox-filter.active { background: var(--lime); border-color: var(--lime); color: var(--ink); }
+.inbox-thread { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line-soft); }
+.inbox-thread:hover { background: var(--paper); }
+.inbox-thread[aria-current] { background: var(--paper); box-shadow: inset 3px 0 var(--ink); }
+.inbox-avatar { display: grid; place-items: center; flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; background: var(--ink); color: var(--lime); font-family: var(--mono); font-size: 12.5px; font-weight: 600; }
+.inbox-thread-copy { display: grid; min-width: 0; }
+.inbox-thread-copy strong { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inbox-thread-copy small { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inbox-badge { padding: 2px 7px; border-radius: 6px; background: var(--lime); color: var(--ink); font-family: var(--mono); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.inbox-list-empty, .buyer-thread-list .dashboard-empty { display: grid; justify-items: center; gap: 8px; padding: 32px 20px; text-align: center; color: var(--ink-3); font-size: 14px; }
+.seller-messages, .buyer-conversation { display: flex; flex-direction: column; min-width: 0; background: var(--card); }
+.inbox-thread-header { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.inbox-thread-header > div { flex: 1; min-width: 0; }
+.inbox-thread-header h2 { font-size: 16px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.buyer-inquiry-summary { gap: 8px; padding: 10px 18px; border-bottom: 1px solid var(--line-soft); }
+.inbox-offer { font-family: var(--mono); font-size: 14px; }
+.seller-message-list { flex: 1; align-content: end; gap: 12px; padding: 20px; background: var(--paper); }
+.seller-message { max-width: min(80%, 560px); padding: 10px 14px; border: 1px solid var(--line-soft); border-radius: 16px 16px 16px 4px; background: var(--card); }
+.seller-message strong { font-size: 12.5px; }
+.seller-message.from-seller { border-color: var(--ink); border-radius: 16px 16px 4px 16px; background: var(--ink); color: #fff; }
+.seller-message time { font-family: var(--mono); font-size: 11px; }
+.inbox-start { align-self: center; }
+.seller-reply { padding: 14px 18px; border-top: 1px solid var(--line); background: var(--card); }
+.seller-reply textarea { min-height: 52px; }
+.inbox-placeholder { flex: 1; display: grid; place-content: center; justify-items: center; gap: 10px; padding: 48px 24px; text-align: center; }
+.inbox-placeholder > span { display: grid; place-items: center; width: 64px; height: 64px; margin-bottom: 6px; border-radius: 18px; background: var(--lime); color: var(--ink); }
+.inbox-placeholder h2 { font-size: 20px; font-weight: 650; }
+.inbox-placeholder p { max-width: 380px; }
+.inbox-placeholder .startup-submit { margin-top: 8px; }
+.seller-acquisition { display: flex; flex-direction: column; gap: 16px; padding: 20px; border-top: 0; border-left: 1px solid var(--line); background: #faf9f6; }
+.seller-acquisition dl { display: grid; gap: 14px; margin: 0; padding: 0; }
+.seller-acquisition dl div { display: grid; gap: 2px; }
+.seller-acquisition dt { font-size: 12px; }
+.seller-acquisition dd { font-weight: 500; }
+.seller-acquisition > .muted { font-size: 14px; }
+.inbox-note { display: flex; gap: 8px; margin-top: auto; padding: 12px; border: 1px dashed var(--line); border-radius: 12px; color: var(--ink-3); font-size: 12.5px; }
+.inbox-note svg { flex-shrink: 0; margin-top: 2px; }
+.buyer-conversation > .workspace-empty { flex: 1; }
+
+@media (max-width: 1200px) {
+  .marketplace-workspace .seller-inbox, .seller-inbox { grid-template-columns: 270px minmax(0, 1fr); }
+  .seller-acquisition { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); }
+  .seller-acquisition dl { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .inbox-note { margin-top: 0; }
+}
+@media (max-width: 900px) {
+  .marketplace-workspace .seller-inbox, .seller-inbox, .buyer-inbox { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  .seller-inbox-list, .buyer-thread-list { max-height: 300px; overflow-y: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+  .seller-messages, .buyer-conversation { min-height: 420px; }
+  .seller-message { max-width: 92%; }
+}
+
+/* ---------- Signed-in workspace: pages and forms ---------- */
+.workspace-tabs { display: inline-flex; gap: 4px; max-width: 100%; margin-bottom: 24px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.workspace-tabs a { padding: 7px 14px; border-bottom: 0; border-radius: 9px; color: var(--ink-2); font-weight: 500; }
+.workspace-tabs a[aria-current] { background: var(--ink); color: #fff; font-weight: 600; }
+.workspace-tabs a[aria-current] span { background: #ffffff2b; }
+.listing-contact .workspace-tabs { gap: 4px; margin-top: 0; }
+.workspace-pipeline { padding: 4px 20px; }
+.seller-interest-list article { padding: 16px 20px; }
+.seller-interest-list article h2 { font-size: 15px; font-weight: 650; }
+.workspace-empty h2 { font-size: 20px; font-weight: 650; }
+
+.seller-notice { border-color: #f0dca0; background: #fff8e3; color: var(--ink); }
+.seller-notice > svg { color: var(--sale-ink); }
+.seller-notice p { color: var(--ink-2); }
+.seller-notice-ok { border-color: var(--accent-line); background: var(--accent-soft); }
+.seller-notice-ok > svg { color: var(--accent); }
+.seller-verification-badge { border-color: var(--accent-line); background: var(--card); color: var(--accent); font-weight: 600; font-size: 13px; }
+.seller-picture .dashboard-startup-mark { width: 76px; height: 76px; border-radius: 50%; background: var(--ink); color: var(--lime); font-family: var(--mono); }
+.seller-social { border-radius: 16px; background: var(--paper); border-color: var(--line); }
+.seller-social-status { border-radius: 12px; border-color: var(--line); }
+.seller-settings-card .seller-toggle-row + .seller-toggle-row { padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.seller-toggle-row strong { font-weight: 600; }
+.seller-timezone select { min-height: 40px; }
+.seller-delete { border-color: var(--line-soft); }
+.seller-danger { color: var(--down); font-weight: 600; }
+.seller-feedback-form textarea { min-height: 160px; }
+.seller-form-actions small { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+.seller-result { color: var(--accent); font-weight: 500; }
+.buyer-category-picker { border-radius: 12px; border-color: var(--line); }
+@media (max-width: 760px) { .workspace-tabs { display: flex; overflow-x: auto; } }
+.seller-acquisition h2.workspace-eyebrow { font-size: 11px; line-height: 1.4; }
