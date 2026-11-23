@@ -7,6 +7,7 @@ import {
   syncSponsorCheckout, type Checkout,
 } from "@/lib/sponsor-billing";
 import { openSponsorBilling, startSponsorCheckout } from "./actions";
+import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 
 export const metadata = { title: "Advertise | VerifedDB" };
 
@@ -47,10 +48,16 @@ export default async function AdvertisePage({ searchParams }: {
     showOffer ? readSponsorPrice() : null,
   ]);
 
-  return <main className="sponsor-page">
-    <nav aria-label="Sponsorship navigation"><Link href="/">← Home</Link><Link href="/acquire">Marketplace</Link></nav>
+  return <>
+  <SiteHeader signedIn={Boolean(user)} current="advertise" next="/advertise" />
+  <main className="sponsor-page">
+    <header className="sponsor-hero">
+      <span className="eyebrow-pill"><span className="live-dot" />Sponsorships</span>
+      <h1>{sponsorship ? <>Your sponsor card, <em>in front of buyers.</em></> : <>Get in front of founders <em>and the people buying.</em></>}</h1>
+      <p>Your card appears beside the leaderboard on the home page and next to the filters on the marketplace.</p>
+    </header>
     <div className="sponsor-sheet">
-      <h1>{sponsorship ? "Your sponsorship" : "Advertise on VerifedDB"}</h1>
+      <h2>{sponsorship ? "Your sponsorship" : "Advertise on VerifedDB"}</h2>
       {params.error && Object.hasOwn(errors, params.error) && <p role="alert">{errors[params.error]}</p>}
       {failed && <p role="alert">Couldn’t check your sponsorship. Refresh to try again.</p>}
       {sponsorship?.state === "active" && <>
@@ -67,6 +74,8 @@ export default async function AdvertisePage({ searchParams }: {
       </>}
       {showOffer && <SponsorOffer catalog={catalog} price={price} enabled={sponsorCheckoutEnabled()} />}
     </div>
-  </main>;
+  </main>
+  <SiteFooter />
+  </>;
 }
 

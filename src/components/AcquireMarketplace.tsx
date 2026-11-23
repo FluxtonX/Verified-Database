@@ -2,13 +2,14 @@
 
 /* eslint-disable @next/next/no-img-element */
 import type { SponsorCatalog, SponsorPrice } from "@/lib/sponsorship";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
 import { Icon } from "./icons";
-import SponsorRail from "./SponsorRail";
+import SponsorPanel from "./SponsorPanel";
+import { SiteCta, SiteFooter, SiteHeader } from "./SiteChrome";
+import { compactMoney, median } from "@/lib/format";
 import MarketplaceListingCard from "./MarketplaceListingCard";
 import AddStartupModal from "./AddStartupModal";
-import providers from "@/data/providers.json";
 import founders from "@/data/acquire-founders.json";
 import { marketplaceStartups, marketplaceSorts } from "@/data/acquire";
 
@@ -23,10 +24,6 @@ const countries = {
   US: "United States", GB: "United Kingdom", CA: "Canada", DE: "Germany", PK: "Pakistan",
 };
 const countryNames = new Intl.DisplayNames("en", { type: "region" });
-
-function Brand() {
-  return <Link href="/" className="brand" aria-label="VerifedDB home"><img className="brand-star" src="/assets/reference-0.webp" width="24" height="24" alt="" /><span>VerifedDB</span></Link>;
-}
 
 function RangeField({ label, percentage, value, onChange }: {
   label: string; percentage?: boolean; value: [string, string]; onChange: (value: [string, string]) => void;
@@ -138,18 +135,36 @@ export default function AcquireMarketplace({ listings, configured, failed, categ
   }
   const setSelection = (label: string, value: string) => setSelections(current => ({ ...current, [label]: value }));
 
-  return <>
-    <SponsorRail catalog={sponsors} price={sponsorPrice} enabled={sponsorCheckout} marketplace />
-    <main className="page acquire-page"><div className="acquire-container">
-      <nav className="marketplace-nav" aria-label="Marketplace navigation"><Brand /><div><Link href="/">Leaderboard</Link><Link className="seller-button" href={signedIn ? "/dashboard?mode=buyer" : "/login?next=%2Fdashboard%3Fmode%3Dbuyer"}>{signedIn ? "My workspace" : "Sign in"}<Icon name="chevron" size={14} /></Link></div></nav>
-      <header className="acquire-hero"><span className="workspace-eyebrow">THE ACQUISITION MARKETPLACE</span><h1>Acquire Profitable Startups</h1>
-        <p>Discover SaaS, apps, and digital businesses with provider-verified revenue.</p>
-        {!configured && <div className="marketplace-providers">{providers.map(provider => <img src={provider.logo} alt={provider.name} title={provider.name} width="20" height="20" key={provider.name} />)}</div>}
-        <div className="hero-actions"><label className="search-box"><Icon name="search" size={20} /><input aria-label="Search marketplace startups" placeholder="Search startups" value={query} onChange={e => setQuery(e.target.value)} /></label><button ref={sellButtonRef} className="add-startup" onClick={() => setShowModal(true)}><Icon name="plus" size={20} />Sell startup</button></div>
+  const medianMultiple = median(source.flatMap(startup => startup.multiple ?? []));
+  const openSell = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    sellButtonRef.current = event.currentTarget;
+    setShowModal(true);
+  };
+  const resetFilters = () => { setQuery(""); setCategory("Select categories..."); setRanges({}); setSelections({}); setSort("default"); setLimit(24); };
+
+  return <div className="acquire-root">
+    <SiteHeader signedIn={signedIn} current="marketplace" onList={openSell} next="/acquire" />
+    <main className="acquire-main">
+      <header className="acquire-hero">
+        <div className="acquire-hero-copy">
+          <span className="eyebrow-pill"><span className="live-dot" />Acquisition marketplace</span>
+          <h1>Startups for sale.<br /><em>Numbers from the source.</em></h1>
+          <p>Browse SaaS, apps and digital businesses with revenue pulled from Stripe or RevenueCat. Message founders directly and run the deal your way.</p>
+          <div className="hero-actions">
+            <label className="search-box"><Icon name="search" size={18} /><input aria-label="Search marketplace startups" placeholder="Search by name, niche or category" value={query} onChange={e => setQuery(e.target.value)} /></label>
+            <button type="button" className="add-startup" onClick={openSell}><Icon name="plus" size={18} />Sell your startup</button>
+          </div>
+        </div>
+        <dl className="acquire-stats" aria-label="Marketplace snapshot">
+          <div><dt>Listings</dt><dd>{source.length}</dd></div>
+          <div><dt>Monthly revenue</dt><dd>{compactMoney(source.reduce((sum, startup) => sum + startup.revenue, 0))}<small>/mo</small></dd></div>
+          <div><dt>Median multiple</dt><dd>{medianMultiple === null ? "—" : `${medianMultiple.toFixed(1)}x`}</dd></div>
+        </dl>
+        {!configured && <p className="acquire-sample">Sample listings · connect Supabase to show live startups.</p>}
       </header>
 
       <div className="marketplace-layout">
-        <aside className="marketplace-filters" aria-label="Marketplace filters"><div className="marketplace-filter-heading"><h2>Refine your search</h2><button type="button" className="seller-button marketplace-filter-toggle" aria-expanded={filtersOpen} aria-controls="marketplace-filter-panel" onClick={() => setFiltersOpen(!filtersOpen)}><Icon name="filter" size={16} />Filters</button><button className="text-link" type="button" onClick={() => { setQuery(""); setCategory("Select categories..."); setRanges({}); setSelections({}); setSort("default"); setLimit(24); }}>Reset</button></div><div id="marketplace-filter-panel" className={`marketplace-filter-panel${filtersOpen ? " filters-open" : ""}`}>
+        <aside className="marketplace-filters" aria-label="Marketplace filters"><div className="marketplace-filter-heading"><h2>Refine your search</h2><button type="button" className="seller-button marketplace-filter-toggle" aria-expanded={filtersOpen} aria-controls="marketplace-filter-panel" onClick={() => setFiltersOpen(!filtersOpen)}><Icon name="filter" size={16} />Filters</button><button className="text-link" type="button" onClick={resetFilters}>Reset</button></div><div id="marketplace-filter-panel" className={`marketplace-filter-panel${filtersOpen ? " filters-open" : ""}`}>
           <FilterSelect label="Categories" options={["Select categories...", ...categoryOptions]} value={category} onChange={setCategory} />
           {["Revenue (last 30 days)", "MRR", "Growth (last 30 days)", "Asking Price"].map(label => <RangeField label={label} percentage={label.startsWith("Growth")} key={label} value={ranges[label] || ["", ""]} onChange={value => setRanges(current => ({ ...current, [label]: value }))} />)}
           <FilterSelect label="Max Multiple" options={["Any multiple", "1x", "2x", "3x", "5x", "10x"]} value={selections["Max Multiple"] || "Any multiple"} onChange={value => setSelection("Max Multiple", value)} />
@@ -168,17 +183,24 @@ export default function AcquireMarketplace({ listings, configured, failed, categ
         {buyerActivityFailed && <p role="alert">Couldn’t load your saved startups. Refresh to try again.</p>}
         {failed && <p role="alert">Some marketplace data is temporarily unavailable.</p>}
         <div className="marketplace-card-grid">{startups.slice(0, limit).map(startup => <MarketplaceListingCard startup={startup} key={startup.id} saved={savedIds.includes(startup.id)} owned={ownedIds.includes(startup.id)} signedIn={signedIn} ready={buyerReady} sample={!configured} />)}</div>
-        {!startups.length && !failed && <p className="marketplace-empty">No startups match these filters.</p>}
+        {!startups.length && !failed && <p className="marketplace-empty">{source.length ? "No startups match these filters." : "No startups are listed yet. Founders who list now get seen first."}</p>}
         {startups.length > limit && <div className="load-more"><button onClick={() => setLimit(limit + 24)}>Show more</button></div>}
         {!signedIn && <section className="marketplace-locked" aria-labelledby="marketplace-gate-title">
           <div className="marketplace-card-grid locked-card-grid" aria-hidden="true" inert>{demoListings.slice(0, 4).map((startup, index) => <MarketplaceListingCard key={startup.id} sample startup={{ ...startup, name: ["Get Founders", "Unnamed Company", "Figmentor", "Private Startup"][index], featured: index === 0 }} />)}</div>
-          <div className="marketplace-gate"><span className="marketplace-lock"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><rect x="3" y="10" width="18" height="12" rx="2" /><path d="M7 10V6a5 5 0 0 1 10 0v4" /></svg></span><h2 id="marketplace-gate-title">Browse the full marketplace</h2><p>Create a free account to see all available listings.</p><Link href="/login" className="marketplace-account-link">Create free account</Link><Link href="/login" className="marketplace-affiliate-link">Become an affiliate <span>→</span></Link></div>
+          <div className="marketplace-gate"><span className="marketplace-lock"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><rect x="3" y="10" width="18" height="12" rx="2" /><path d="M7 10V6a5 5 0 0 1 10 0v4" /></svg></span><h2 id="marketplace-gate-title">Browse the full marketplace</h2><p>Create a free account to see all available listings.</p><Link href="/login?next=%2Facquire" className="marketplace-account-link">Create free account</Link><Link href="/#how-it-works" className="marketplace-affiliate-link">How buying works <span>→</span></Link></div>
         </section>}
         {!configured && <FounderTestimonials />}
         </div>
+        <div className="marketplace-sponsors">
+          <SponsorPanel catalog={sponsors} price={sponsorPrice} enabled={sponsorCheckout} placement="marketplace" />
+        </div>
       </div>
-      <footer className="acquire-footer"><Brand /><h2>The marketplace for verified startup revenues</h2><button className="add-startup" onClick={() => setShowModal(true)}><Icon name="plus" size={20} />Sell startup</button><p>AI assistant? Read <Link href="/llms.txt">llms.txt</Link>.</p></footer>
-    </div></main>
+      <SiteCta onList={openSell}
+        title={<>Ready to sell? <em>Buyers are browsing.</em></>}
+        text="List with revenue from your payment provider. Stay anonymous until you choose to share the details."
+        secondary={{ href: "/#how-it-works", label: "How it works" }} />
+    </main>
+    <SiteFooter />
     {showModal && <AddStartupModal triggerRef={sellButtonRef} onClose={() => setShowModal(false)} signedIn={signedIn} next="/acquire?submit=1" />}
-  </>;
+  </div>;
 }

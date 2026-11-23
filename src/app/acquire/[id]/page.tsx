@@ -8,6 +8,7 @@ import { marketplaceStartups } from "@/data/acquire";
 import { ListingContact, SaveListingButton } from "@/components/BuyerForms";
 import StartupLogo from "@/components/StartupLogo";
 import { Icon } from "@/components/icons";
+import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 
 export const metadata: Metadata = { title: "Acquisition opportunity | VerifedDB" };
 type Details = {
@@ -32,7 +33,8 @@ export default async function ListingPage({ params, searchParams }: {
     if (listing.error) throw new Error("Couldn’t load this listing. Please try again.");
     if (!listing.data) {
       // Guest visibility is restricted by the marketplace projection.
-      return <main className="listing-page"><Link className="text-link" href="/acquire">← Marketplace</Link><div className="seller-card workspace-empty"><Icon name="building" size={28} /><h1>Listing unavailable</h1><p className="muted">It may have sold, been withdrawn, or require a member account.</p><Link className="startup-submit" href={session.data?.claims.sub ? "/acquire" : `/login?next=${encodeURIComponent(destination)}`}>{session.data?.claims.sub ? "Explore other startups" : "Sign in to the marketplace"}</Link></div></main>;
+      const viewer = Boolean(session.data?.claims.sub);
+      return <><SiteHeader signedIn={viewer} current="marketplace" next={destination} /><main className="listing-page"><nav className="listing-nav" aria-label="Listing navigation"><Link className="listing-back" href="/acquire">← Marketplace</Link></nav><div className="seller-card workspace-empty"><Icon name="building" size={28} /><h1>Listing unavailable</h1><p className="muted">It may have sold, been withdrawn, or require a member account.</p><Link className="startup-submit" href={session.data?.claims.sub ? "/acquire" : `/login?next=${encodeURIComponent(destination)}`}>{session.data?.claims.sub ? "Explore other startups" : "Sign in to the marketplace"}</Link></div></main><SiteFooter /></>;
     }
     startup = marketplaceCard(listing.data);
     details = listing.data as Details;
@@ -58,7 +60,7 @@ export default async function ListingPage({ params, searchParams }: {
     ["Profit margin · seller reported", startup.margin == null ? null : `${startup.margin}%`],
   ].filter(([, value]) => value);
   const product = Object.entries(details?.product_details ?? {}).filter((entry): entry is [string, string] => typeof entry[1] === "string" && Boolean(entry[1]));
-  return <main className="listing-page"><nav className="listing-nav" aria-label="Listing navigation"><Link className="text-link" href="/acquire">← Marketplace</Link><Link href={buyerUrl()} className="seller-button">Buyer workspace <Icon name="chevron" size={14} /></Link></nav>
+  return <><SiteHeader signedIn={signedIn} current="marketplace" next={destination} /><main className="listing-page"><nav className="listing-nav" aria-label="Listing navigation"><Link className="listing-back" href="/acquire">← Marketplace</Link>{signedIn && <Link href={buyerUrl()} className="seller-button">Buyer workspace <Icon name="chevron" size={14} /></Link>}</nav>
     {!supabase && <p className="listing-sample-note">Sample listing · Sign-in and seller contact require a connected marketplace.</p>}
     <header className="listing-header"><StartupLogo name={startup.name} src={startup.logo || undefined} /><div><span className="workspace-eyebrow">{startup.category}</span><h1>{startup.name}</h1><p className="muted">{startup.private ? "Confidential acquisition opportunity" : "A new chapter starts here"}</p></div>{supabase && !details?.is_owner && <SaveListingButton key={id} id={id} saved={saved} signedIn={signedIn} ready={ready} />}</header>
     <div className="listing-layout"><div><section className="seller-card listing-about"><h2>The opportunity</h2><p>{startup.description || "The seller is keeping this business confidential. Reach out to learn more."}</p>{startup.private && <div className="listing-confidential"><Icon name="shield" size={19} /><p className="muted">Company identity is private. Discuss access to sensitive details directly with the seller.</p></div>}
@@ -71,5 +73,5 @@ export default async function ListingPage({ params, searchParams }: {
     </div><aside className="listing-contact-column"><section className="seller-card listing-price"><span className="workspace-eyebrow">ASKING PRICE</span><strong>{dollars.format(startup.price)}</strong>{startup.oldPrice && <p className="muted">Previously {startup.oldPrice}</p>}<span className="status-pill">Available for acquisition</span>
       {conversation && <Link className="seller-button" href={buyerUrl("chat", { thread: conversation })}>Your conversation <Icon name="inbox" size={15} /></Link>}</section>
       <section className="seller-card listing-contact" id="contact">{details?.is_owner ? <><h2>This is your listing</h2><Link className="startup-submit" href="/dashboard?mode=seller">Manage your startup</Link></> : !supabase ? <><h2>Explore the buyer experience</h2><p className="muted">Connect Supabase and publish a real listing to start conversations.</p><Link className="seller-button" href="/acquire">Back to marketplace</Link></> : !signedIn ? <><h2>Meet the seller</h2><p className="muted">Sign in to save this startup and discuss an acquisition.</p><Link className="startup-submit" href={`/login?next=${encodeURIComponent(destination)}`}>Sign in to continue</Link></> : !ready ? <><h2>Introduce yourself first</h2><p className="muted">Create your buyer profile so sellers know who they’re talking to.</p><Link className="startup-submit" href={buyerUrl("my-profile", { returnTo: destination })}>Set up buyer profile</Link></> : <><nav className="workspace-tabs" aria-label="Contact type"><Link href={`/acquire/${id}#contact`} aria-current={!inquiry ? "page" : undefined}>Ask a question</Link><Link href={`/acquire/${id}?intent=inquiry#contact`} aria-current={inquiry ? "page" : undefined}>Acquire</Link></nav><ListingContact id={id} inquiry={inquiry} key={`${id}:${inquiry}`} /></>}</section>
-    </aside></div></main>;
+    </aside></div></main><SiteFooter /></>;
 }
