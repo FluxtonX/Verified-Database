@@ -133,8 +133,10 @@ export async function readHome(supabase: SupabaseClient) {
   const listing = (row: MarketplaceRow) => {
     const card = marketplaceCard(row);
     return {
+      id: card.id as string | undefined,
       name: card.name, category: card.category, logo: card.logo, revenue: card.revenueLabel,
       price: card.priceLabel, multiple: card.multiple === null ? "—" : `${card.multiple.toFixed(1)}x`,
+      multipleValue: card.multiple,
       private: card.private, featured: card.featured,
     };
   };
@@ -143,6 +145,7 @@ export async function readHome(supabase: SupabaseClient) {
       rank: index + 1, name: row.name, description: row.description ?? "", logo: row.logo ?? "",
       founder: row.founder ?? "-", avatar: row.avatar ?? "", private: row.anonymous, sale: row.for_sale,
       mrr: dollars.format(row.mrr_cents / 100),
+      mrrValue: row.mrr_cents / 100,
       growth: row.mrr_growth_pct === null ? "—" : `${Math.abs(row.mrr_growth_pct)}%`,
       negative: (row.mrr_growth_pct ?? 0) < 0,
       includesNonrecurring: row.includes_nonrecurring,

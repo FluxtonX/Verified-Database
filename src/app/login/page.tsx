@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -6,6 +5,8 @@ import { createSupabase } from "@/lib/supabase/server";
 import { loginDestination } from "@/lib/supabase/config";
 import { signOut } from "./actions";
 import LoginForm from "@/components/LoginForm";
+import BrandMark from "@/components/BrandMark";
+import { Icon } from "@/components/icons";
 
 export const metadata: Metadata = {
   title: "Log in | VerifedDB",
@@ -22,11 +23,20 @@ export default async function LoginPage({ searchParams }: {
   if (signedIn && error !== "logout") redirect(loginDestination(next));
   return (
     <main className="login-page">
+      <aside className="login-aside">
+        <Link href="/" className="login-brand" aria-label="VerifedDB home"><BrandMark size={30} /><span>VerifedDB</span></Link>
+        <div>
+          <h2>Real revenue on the table. <em>Buyers ready to talk.</em></h2>
+          <ul>
+            <li><Icon name="check" size={16} />List with revenue from Stripe or RevenueCat</li>
+            <li><Icon name="check" size={16} />Save startups and message founders directly</li>
+            <li><Icon name="check" size={16} />Run diligence and the deal on your own terms</li>
+          </ul>
+        </div>
+        <p>A meeting place, not a middleman.</p>
+      </aside>
       <div className="login-shell">
-        <Link href="/" className="brand login-brand" aria-label="VerifedDB home">
-          <img src="/assets/reference-0.webp" width="32" height="32" alt="" />
-          <span>VerifedDB</span>
-        </Link>
+        <Link href="/" className="login-brand login-brand-mobile" aria-label="VerifedDB home"><BrandMark size={28} /><span>VerifedDB</span></Link>
         <section className="login-card" aria-labelledby="login-heading">
           <h1 id="login-heading">{signedIn ? "You’re signed in" : "Log in to buy and sell startups"}</h1>
           <p className="login-description">Get deal flow, list your startup, and talk with founders.</p>
@@ -39,6 +49,7 @@ export default async function LoginPage({ searchParams }: {
             </form>
           ) : <LoginForm next={loginDestination(next)} />}
         </section>
+        <Link className="login-back" href="/">← Back to VerifedDB</Link>
       </div>
     </main>
   );

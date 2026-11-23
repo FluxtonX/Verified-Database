@@ -9,6 +9,7 @@ import StartupLogo from "@/components/StartupLogo";
 import StartupRevenue from "@/components/StartupRevenue";
 import type { StartupDetails } from "@/components/StartupDetailsForm";
 import { Icon } from "@/components/icons";
+import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 
 export const metadata: Metadata = { title: "Startup metrics | VerifedDB", robots: { index: false, follow: false } };
 
@@ -54,14 +55,11 @@ export default async function StartupPage({ params }: { params: Promise<{ id: st
   ].filter(([, value]) => value);
 
   return (
+    <>
+    <SiteHeader signedIn />
     <main className="startup-profile-page">
-      <nav className="profile-nav" aria-label="Startup page">
-        <Link href={edit}>Dashboard</Link>
-        <Link href="/#feed">Feed</Link>
-        <Link href="/acquire">Marketplace</Link>
-      </nav>
       <div className="profile-container">
-        <p className="profile-breadcrumb"><Link href="/">✦ VerifedDB</Link> <span>›</span> Startup <span>›</span> <strong>{startup.name}</strong></p>
+        <p className="profile-breadcrumb"><Link href={edit}>Dashboard</Link> <span>/</span> Private preview <span>/</span> <strong>{startup.name}</strong></p>
         <header className="profile-header">
           <StartupLogo name={startup.name} src={logo?.signedUrl ?? importedLogoUrl(startup.imported_logo_url) ?? undefined} />
           <div className="profile-title"><h1>{startup.name}</h1>{startup.description && <p>{startup.description}</p>}</div>
@@ -93,5 +91,7 @@ export default async function StartupPage({ params }: { params: Promise<{ id: st
         <section className="profile-discover"><h2>Discover more startups</h2><Link href="/acquire">Explore the marketplace →</Link></section>
       </div>
     </main>
+    <SiteFooter />
+    </>
   );
 }
