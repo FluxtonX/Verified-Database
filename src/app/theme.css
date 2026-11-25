@@ -380,3 +380,15 @@
 .skeleton-sidebar { display: grid; gap: 14px; padding: 24px 14px; }
 @keyframes skeleton { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .skeleton-bar, .skeleton-card { animation: none; } }
+
+/* ---------- Startup management: disconnect + delete ---------- */
+.dashboard-sources li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.source-actions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.danger-link { color: var(--down); }
+.danger-zone { display: grid; gap: 14px; margin: 8px 24px 24px; padding: 18px; border: 1px solid #f1c4bd; border-radius: 14px; background: #fdf6f4; }
+.danger-zone h3 { font-size: 15px; font-weight: 650; }
+.danger-zone .muted { margin-top: 4px; font-size: 13.5px; }
+.danger-button { justify-self: start; color: var(--down); border-color: #f1c4bd; }
+.danger-submit { background: var(--down); }
+.danger-submit:hover:not(:disabled) { background: #a52a21; }
+@media (max-width: 760px) { .danger-zone { margin: 8px 16px 16px; } }

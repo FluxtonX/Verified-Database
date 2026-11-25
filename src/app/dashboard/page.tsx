@@ -11,6 +11,7 @@ import StartupLogo from "@/components/StartupLogo";
 import { createSupabase } from "@/lib/supabase/server";
 import { Icon } from "@/components/icons";
 import DashboardShell from "@/components/DashboardShell";
+import { DeleteStartup, DisconnectSource } from "@/components/StartupManageActions";
 import { InterestedBuyers, SellerInbox } from "@/components/SellerInbox";
 import { SellerFeedback, SellerProfileForm, SellerSettings, SellerSocials } from "@/components/SellerDashboardForms";
 import { sellerTabs, sellerUrl, type DashboardMode, type SellerTab, type SellerLead, type SellerMessage, type SellerProfile } from "@/lib/seller-dashboard";
@@ -159,13 +160,16 @@ async function SellerStartups({ supabase, owner, selected }: { supabase: Supabas
                   <div>
                     <strong>Payment providers</strong>
                     <ul>{startup.startup_payment_sources.map(source => (
-                      <li key={source.id}>{providerNames[source.provider]} · {source.name}{source.synced_at ? "" : " · Metrics pending"}</li>
+                      <li key={source.id}>{providerNames[source.provider]} · {source.name}{source.synced_at ? "" : " · Metrics pending"}
+                        <DisconnectSource sourceId={source.id} startupId={startup.id} name={providerNames[source.provider]} /></li>
                     ))}</ul>
                     {!startup.startup_payment_sources.length && <p>No providers connected.</p>}
                   </div>
                   <DashboardAddStartup startupId={startup.id} key={startup.id} />
                 </div>
                 <StartupDetailsForm key={startup.id} startup={startup} logoUrl={logoFor(startup)} categories={categories.data?.map(item => item.name)} />
+                <DeleteStartup key={`delete:${startup.id}`} id={startup.id} name={startup.name}
+                  listed={publications.data?.some(item => item.submission_id === startup.id && item.status === "active") ?? false} />
               </>
             ) : <p className="dashboard-empty">Connect Stripe or RevenueCat to add your first startup.</p>}
         </section>

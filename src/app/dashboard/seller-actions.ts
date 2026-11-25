@@ -8,6 +8,7 @@ import { appOrigin, oauthDestinationCookie } from "@/lib/supabase/config";
 import { profilePictureBucket, sellerUrl } from "@/lib/seller-dashboard";
 import { isLogoImage } from "@/lib/startup-logo";
 import { startupHandle } from "@/lib/startup-details";
+import { logError } from "@/lib/log";
 
 type State = { error?: string; message?: string };
 
@@ -19,13 +20,14 @@ async function account() {
 }
 
 const text = (form: FormData, field: string) => String(form.get(field) ?? "").trim();
+const rateLimited = "You’re sending messages very quickly. Wait a few minutes and try again.";
 const isId = (id: string) => /^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/i.test(id);
 
 async function saveAccount(values: Record<string, string | boolean | null>): Promise<State> {
   const user = await account();
   if (!user) return { error: "Sign in to continue." };
   const { error } = await user.supabase.from("profiles").upsert({ id: user.id, ...values }, { defaultToNull: false });
-  if (error) return { error: "Couldn’t save your changes. Try again." };
+  if (error) { logError("profile.save", error, { fields: Object.keys(values).join(",") }); return { error: "Couldn’t save your changes. Try again." }; }
   revalidatePath("/dashboard");
   return { message: "Changes saved." };
 }
@@ -68,7 +70,7 @@ export async function uploadProfilePicture(form: FormData): Promise<State> {
   const bucket = user.supabase.storage.from(profilePictureBucket);
   const path = `${user.id}.png`;
   const { error } = await bucket.upload(path, file, { upsert: true, cacheControl: "0", contentType: "image/png" });
-  if (error) return { error: "Couldn’t upload your picture. Try again." };
+  if (error) { logError("profile.picture_upload", error); return { error: "Couldn’t upload your picture. Try again." }; }
   const { data } = bucket.getPublicUrl(path);
   const url = new URL(data.publicUrl);
   url.searchParams.set("v", randomUUID());
@@ -95,7 +97,7 @@ export async function changeSellerEmail(_: State, form: FormData): Promise<State
   }
   const callback = new URL("/auth/callback", appOrigin());
   const { error } = await user.supabase.auth.updateUser({ email }, { emailRedirectTo: callback.href });
-  if (error) return { error: "Couldn’t request the email change. Try again later." };
+  if (error) { logError("account.email_change", error); return { error: "Couldn’t request the email change. Try again later." }; }
   (await cookies()).set(oauthDestinationCookie, sellerUrl("settings"), {
     path: "/auth/callback", httpOnly: true, secure: callback.protocol === "https:", sameSite: "lax", maxAge: 3600,
   });
@@ -114,6 +116,7 @@ export async function sendSellerFeedback(_: State, form: FormData): Promise<Stat
   const body = text(form, "feedback");
   if (!body || body.length > 2000) return { error: "Enter feedback up to 2,000 characters." };
   const { error } = await user.supabase.rpc("submit_seller_feedback", { p_body: body });
+  if (error && error.code !== "P0001") logError("seller.feedback", error);
   if (error) return { error: error.code === "P0001" ? "You’ve sent all 10 feedback messages." : "Couldn’t save feedback. Try again." };
   revalidatePath("/dashboard");
   return { message: "Feedback sent. Thank you." };
@@ -125,7 +128,7 @@ export async function sendSellerMessage(leadId: string, _: State, form: FormData
   const body = text(form, "message");
   if (!body || body.length > 2000) return { error: "Enter a message up to 2,000 characters." };
   const { error } = await user.supabase.rpc("send_seller_message", { p_lead_id: leadId, p_body: body });
-  if (error) return { error: "Couldn’t send your message. Try again." };
+  if (error) { logError("seller.message", error, { lead: leadId }); return { error: error.code === "P0005" ? rateLimited : "Couldn’t send your message. Try again." }; }
   revalidatePath("/dashboard");
   return { message: "Message sent." };
 }
@@ -134,6 +137,7 @@ export async function setSellerLeadArchived(leadId: string, archived: boolean): 
   const user = await account();
   if (!user || !isId(leadId)) return { error: "Conversation unavailable." };
   const { data, error } = await user.supabase.from("seller_leads").update({ archived }).eq("seller_id", user.id).eq("id", leadId).select("id").maybeSingle();
+  if (error) logError("seller.archive", error, { lead: leadId });
   if (error || !data) return { error: "Couldn’t move this conversation. Try again." };
   revalidatePath("/dashboard");
   return { message: archived ? "Conversation archived." : "Conversation restored." };

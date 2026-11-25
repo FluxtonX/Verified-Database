@@ -1,5 +1,6 @@
 import { revenueCatAppProfile, type RevenueCatApp } from "./revenuecat-app-profile";
 import { readStripeProfile } from "./stripe-profile";
+import { logError } from "./log";
 import { dayMs, historyDays, isoDay, type CurrencyMetrics, type ProviderMetrics } from "./startup-metrics";
 
 type ImportedSource = {
@@ -102,6 +103,8 @@ export async function importStripeSource(key: string): Promise<{ source?: Import
       metrics: { currencies, active: allSubscriptions ? active : null },
     } };
   } catch (error) {
+    // getJson throws the HTTP status as the message; keys never appear in errors.
+    logError("provider.stripe_import", error);
     return { error: error instanceof Error && error.message === "403"
       ? "Enable read access to Charges and Subscriptions on your Stripe restricted key."
       : "Couldn’t read Stripe metrics. Check the key permissions and try again." };
@@ -188,6 +191,7 @@ export async function importRevenueCatSource(key: string, projectId: string): Pr
       },
     } };
   } catch (error) {
+    logError("provider.revenuecat_import", error);
     return { error: error instanceof Error && error.message === "403"
       ? "Enable read access to Projects and Overview Metrics on your RevenueCat key."
       : "Couldn’t read RevenueCat. Check your V2 key and project permissions." };
