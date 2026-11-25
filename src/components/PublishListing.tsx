@@ -17,9 +17,14 @@ export default function PublishListing({ id, sources, publication, requested }: 
   const key = useRef<HTMLInputElement>(null);
   const [withdrawal, setWithdrawal] = useState<ActionResult>({});
   const [withdrawing, start] = useTransition();
+  const [confirmWithdraw, setConfirmWithdraw] = useState(false);
   return <section className="publish-listing"><div className="workspace-heading"><div><span className="workspace-eyebrow">MARKETPLACE</span><h2>{publication?.status === "active" ? "Your listing is live" : publication?.status === "sold" ? "Startup acquired" : "Ready for a new owner?"}</h2></div>
     <span className={`status-pill ${publication?.status === "active" ? "status-positive" : ""}`}>{publication?.status ?? "Not listed"}</span></div>
-    {publication?.status === "active" && <div className="seller-inline"><Link className="text-link" href={`/acquire/${publication.listing_id}`}>View marketplace listing →</Link><button className="seller-button" disabled={withdrawing} onClick={() => start(async () => { try { setWithdrawal(await withdrawListing(publication.listing_id)); } catch { setWithdrawal({ error: "Couldn’t withdraw this listing. Try again." }); } })}>{withdrawing ? "Withdrawing…" : "Withdraw listing"}</button></div>}
+    {publication?.status === "active" && <div className="seller-inline"><Link className="text-link" href={`/acquire/${publication.listing_id}`}>View marketplace listing →</Link><button className="seller-button" disabled={withdrawing} onClick={() => {
+      if (!confirmWithdraw) { setConfirmWithdraw(true); return; }
+      start(async () => { try { setWithdrawal(await withdrawListing(publication.listing_id)); } catch { setWithdrawal({ error: "Couldn’t withdraw this listing. Try again." }); } setConfirmWithdraw(false); });
+    }}>{withdrawing ? "Withdrawing…" : confirmWithdraw ? "Confirm withdrawal" : "Withdraw listing"}</button>
+      {confirmWithdraw && !withdrawing && <p className="muted">Buyers with open inquiries or conversations get a message that the listing was withdrawn. <button className="text-link" type="button" onClick={() => setConfirmWithdraw(false)}>Cancel</button></p>}</div>}
     <ActionNotice state={withdrawal} />
     {publication?.status !== "sold" && <details className="publish-details"><summary>{publication?.status === "active" ? "Update price & verify revenue" : "Publish your startup"}</summary><form action={action} className="seller-form">
       <p className="muted">Verify a connected provider to publish its USD revenue. Your key is used once and never saved.</p>

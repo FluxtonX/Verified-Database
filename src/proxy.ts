@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { supabaseConfig } from "@/lib/supabase/config";
+import { loginDestination, supabaseConfig } from "@/lib/supabase/config";
 
 export async function proxy(request: NextRequest) {
   const config = supabaseConfig();
@@ -19,7 +19,18 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  await supabase.auth.getClaims();
+  const { data } = await supabase.auth.getClaims();
+
+  // Private areas: redirect before rendering, so signed-out visitors get a real 307 instead of
+  // a streamed loading skeleton. The pages still check the session themselves.
+  const { pathname, search } = request.nextUrl;
+  if (!data?.claims.sub && (pathname === "/dashboard" || pathname.startsWith("/startup/"))) {
+    const login = new URL("/login", request.url);
+    login.searchParams.set("next", pathname === "/dashboard" ? loginDestination(pathname + search) : "/dashboard");
+    const redirect = NextResponse.redirect(login);
+    response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie));
+    return redirect;
+  }
   return response;
 }
 

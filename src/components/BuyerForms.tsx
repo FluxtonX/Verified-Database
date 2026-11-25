@@ -63,14 +63,14 @@ export function BuyerReply({ id }: { id: string }) {
   return <form action={action} className="seller-form seller-reply"><textarea aria-label="Message" name="message" rows={2} required maxLength={2000} value={body} onChange={e => setBody(e.target.value)} placeholder="Write to the seller…" />
     <div className="seller-form-actions"><ActionNotice state={state} /><button className="startup-submit" disabled={pending || !body.trim()}>{pending ? "Sending…" : "Send message"}</button></div></form>;
 }
-export function AcquisitionAction({ id, status, label, confirm }: { id: string; status: InquiryStatus; label: string; confirm?: string }) {
+export function AcquisitionAction({ id, status, label, confirm, confirmLabel = "Confirm" }: { id: string; status: InquiryStatus; label: string; confirm?: string; confirmLabel?: string }) {
   const [pending, start] = useTransition();
   const [state, setState] = useState<ActionResult>({});
   const [confirming, setConfirming] = useState(false);
   return <div><button type="button" className="seller-button" disabled={pending} onClick={() => {
     if (confirm && !confirming) { setConfirming(true); return; }
     start(async () => { try { setState(await updateAcquisition(id, status)); } catch { setState({ error: "Couldn’t update this inquiry. Try again." }); } setConfirming(false); });
-  }}>{pending ? "Updating…" : confirming ? "Confirm completion" : label}</button>
+  }}>{pending ? "Updating…" : confirming ? confirmLabel : label}</button>
     {confirming && <p>{confirm} <button className="text-link" type="button" onClick={() => setConfirming(false)}>Cancel</button></p>}<ActionNotice state={state} /></div>;
 }
 export function BuyerFeedback({ sent }: { sent: number }) {

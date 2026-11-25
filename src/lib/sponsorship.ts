@@ -29,3 +29,12 @@ export type Sponsorship = Pick<SponsorCard, "id"> & {
   website_url: string | null;
   logo_url: string | null;
 };
+
+/**
+ * Cards that advertisers actually published. Paid cards always carry an uploaded or HTTPS logo;
+ * a bundled `/assets/` logo only ever came from the old seed rows, which listed companies
+ * that never bought a sponsorship. Hide those even before the cleanup migration runs.
+ */
+export function publishedSponsorCards(cards: SponsorCard[]) {
+  return cards.filter(card => !card.logo_url?.startsWith("/assets/"));
+}

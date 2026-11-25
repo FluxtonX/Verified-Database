@@ -40,7 +40,7 @@ export function SellerInbox({ leads, thread, messages, archived, needsReply, tim
             <Link href={sellerUrl("chat", { ...(needsReply && { filter: "reply" }) })} aria-current={!archived ? "page" : undefined}>Main</Link>
             <Link href={sellerUrl("chat", { folder: "archive", ...(needsReply && { filter: "reply" }) })} aria-current={archived ? "page" : undefined}>Archived</Link>
           </nav>
-          <Link className={`inbox-filter${needsReply ? " active" : ""}`} aria-pressed={needsReply}
+          <Link className={`inbox-filter${needsReply ? " active" : ""}`} aria-current={needsReply ? "true" : undefined}
             href={sellerUrl("chat", { ...(archived && { folder: "archive" }), ...(!needsReply && { filter: "reply" }) })}>
             <Icon name="filter" size={14} />Awaiting reply
           </Link>
@@ -66,8 +66,8 @@ export function SellerInbox({ leads, thread, messages, archived, needsReply, tim
           </div>
           <div className="buyer-inquiry-summary"><span className="status-pill">{inquiryLabels[thread.inquiry_status]}</span>
             {thread.offer_cents && <strong className="inbox-offer">Offer {dollars.format(thread.offer_cents / 100)}</strong>}
-            {thread.inquiry_status === "open" && <><AcquisitionAction key={`${thread.id}:accepted`} id={thread.id} status="accepted" label="Discuss acquisition" /><AcquisitionAction key={`${thread.id}:declined`} id={thread.id} status="declined" label="Decline inquiry" /></>}
-            {thread.inquiry_status === "accepted" && <><AcquisitionAction key={`${thread.id}:completed`} id={thread.id} status="completed" label="Mark acquired" confirm="Confirm payment and ownership transfer are complete. This removes the listing from the marketplace." /><AcquisitionAction key={`${thread.id}:declined`} id={thread.id} status="declined" label="Close inquiry" /></>}
+            {thread.inquiry_status === "open" && <><AcquisitionAction key={`${thread.id}:accepted`} id={thread.id} status="accepted" label="Discuss acquisition" /><AcquisitionAction key={`${thread.id}:declined`} id={thread.id} status="declined" label="Decline inquiry" confirm="The buyer will see that you declined. They can send a new inquiry later." confirmLabel="Confirm decline" /></>}
+            {thread.inquiry_status === "accepted" && <><AcquisitionAction key={`${thread.id}:completed`} id={thread.id} status="completed" label="Mark acquired" confirm="Confirm payment and ownership transfer are complete. This removes the listing from the marketplace." confirmLabel="Confirm completion" /><AcquisitionAction key={`${thread.id}:declined`} id={thread.id} status="declined" label="Close inquiry" confirm="This ends the acquisition discussion. The buyer can send a new inquiry later." confirmLabel="Confirm close" /></>}
           </div>
           <div className="seller-message-list">
             {messages.length ? messages.map(message => (

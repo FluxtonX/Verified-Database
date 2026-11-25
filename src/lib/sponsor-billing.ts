@@ -1,7 +1,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { unstable_cache } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabase } from "@/lib/supabase/server";
-import type { SponsorCatalog, SponsorPrice, Sponsorship } from "@/lib/sponsorship";
+import { publicSupabase } from "@/lib/supabase/public";
+import { publishedSponsorCards, type SponsorCatalog, type SponsorPrice, type Sponsorship } from "@/lib/sponsorship";
 
 export function sponsorAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -16,38 +18,59 @@ export function sponsorCheckoutEnabled() {
     process.env.STRIPE_SPONSOR_WEBHOOK_SECRET && process.env.SUPABASE_SECRET_KEY);
 }
 
+/** Cache tags, revalidated when a sponsor publishes a card or Stripe changes a subscription. */
+export const sponsorCatalogTag = "sponsor-catalog";
+
+async function fetchSponsorPrice(id: string): Promise<SponsorPrice | null> {
+  const price = await stripeRequest<{
+    id: string;
+    active: boolean;
+    currency: string;
+    unit_amount: number | null;
+    billing_scheme: string;
+    recurring: { interval: string; interval_count: number; usage_type: string } | null;
+  }>(`prices/${id}`);
+  if (price.id !== id || !price.active || price.currency !== "usd" ||
+      price.unit_amount === null || !Number.isSafeInteger(price.unit_amount) || price.unit_amount <= 0 ||
+      price.billing_scheme !== "per_unit" || price.recurring?.interval !== "month" ||
+      price.recurring.interval_count !== 1 || price.recurring.usage_type !== "licensed") return null;
+
+  const label = new Intl.NumberFormat("en-US", {
+    style: "currency", currency: price.currency,
+    minimumFractionDigits: price.unit_amount % 100 === 0 ? 0 : 2,
+  }).format(price.unit_amount / 100);
+  return { id, label };
+}
+
+// The price rarely changes, and fetching it from Stripe on every page view slowed the home page.
+// Network failures throw, so they're not cached; they show as "pricing unavailable" for that request.
+const cachedSponsorPrice = unstable_cache(fetchSponsorPrice, ["sponsor-price"], { revalidate: 3600 });
+
 export async function readSponsorPrice(): Promise<SponsorPrice | null> {
   const id = process.env.STRIPE_SPONSOR_PRICE_ID?.trim();
   if (!id || !/^price_[A-Za-z0-9]+$/.test(id) || !process.env.STRIPE_SECRET_KEY) return null;
-
   try {
-    const price = await stripeRequest<{
-      id: string;
-      active: boolean;
-      currency: string;
-      unit_amount: number | null;
-      billing_scheme: string;
-      recurring: { interval: string; interval_count: number; usage_type: string } | null;
-    }>(`prices/${id}`);
-    if (price.id !== id || !price.active || price.currency !== "usd" ||
-        price.unit_amount === null || !Number.isSafeInteger(price.unit_amount) || price.unit_amount <= 0 ||
-        price.billing_scheme !== "per_unit" || price.recurring?.interval !== "month" ||
-        price.recurring.interval_count !== 1 || price.recurring.usage_type !== "licensed") return null;
-
-    const label = new Intl.NumberFormat("en-US", {
-      style: "currency", currency: price.currency,
-      minimumFractionDigits: price.unit_amount % 100 === 0 ? 0 : 2,
-    }).format(price.unit_amount / 100);
-    return { id, label };
+    return await cachedSponsorPrice(id);
   } catch {
     return null;
   }
 }
 
-export async function readSponsorCatalog(supabase: Awaited<ReturnType<typeof createSupabase>>) {
+const cachedSponsorCatalog = unstable_cache(async () => {
+  const supabase = publicSupabase();
   if (!supabase) return null;
   const { data, error } = await supabase.rpc("sponsorship_catalog");
-  return error ? null : data as SponsorCatalog | null;
+  if (error) throw error;
+  return data as SponsorCatalog | null;
+}, ["sponsor-catalog"], { revalidate: 300, tags: [sponsorCatalogTag] });
+
+export async function readSponsorCatalog(): Promise<SponsorCatalog | null> {
+  try {
+    const catalog = await cachedSponsorCatalog();
+    return catalog && { ...catalog, cards: publishedSponsorCards(catalog.cards) };
+  } catch {
+    return null;
+  }
 }
 
 export async function sponsorAccount() {

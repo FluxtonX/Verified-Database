@@ -1,9 +1,16 @@
 # VerifedDB
 
-VerifedDB is a startup marketplace interface with hardcoded demonstration data.
+VerifedDB is an open marketplace where founders of small internet businesses (SaaS, mobile apps, digital products) list their startups for sale and buyers contact them directly.
 
-- Homepage: /
-- Marketplace: /acquire
-- Login: /login
+- Revenue figures come from the founder's payment provider (Stripe or RevenueCat), read with a key the founder supplies at the time of verification. Each figure shows when it was last verified.
+- Revenue (last 30 days) includes one-time payments and is gross of fees. MRR counts active subscriptions only. The multiple is asking price ÷ (30-day revenue × 12).
+- VerifedDB is a listing and discovery platform. It is not a broker, escrow agent, or verifier of legal, tax or compliance matters. Buyers and sellers run due diligence, contracts, escrow and transfer themselves.
+- Founders can list anonymously; anonymous listings hide the company name, logo, website, founding date and country.
 
-Authentication, startup submissions, payments, and live revenue verification are not connected in this UI prototype.
+## Pages
+
+- Home and revenue leaderboard: /
+- Startups for sale: /acquire
+- A listing: /acquire/{listing-id}
+- Sponsorships: /advertise
+- Sitemap: /sitemap.xml

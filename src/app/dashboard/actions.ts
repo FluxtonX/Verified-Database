@@ -113,6 +113,10 @@ export async function updateStartupDetails(id: string, _: ActionState, form: For
   const additional = value("additional-info");
   const appStoreInput = value("app-store");
   const googlePlayInput = value("google-play");
+  const anonymous = form.has("anonymous");
+  // Only send the privacy flag when it changes, so other edits keep working on databases
+  // that haven't applied the migration granting this column yet.
+  const anonymityChanged = anonymous !== (form.get("anonymous-was") === "1");
   const appStore = storeLink(appStoreInput, "apps.apple.com");
   const googlePlay = storeLink(googlePlayInput, "play.google.com");
 
@@ -151,10 +155,12 @@ export async function updateStartupDetails(id: string, _: ActionState, form: For
     pricing,
     additional_info: additional,
     ...(form.has("mobile-app") && { app_store_url: appStore, google_play_url: googlePlay }),
+    ...(anonymityChanged && { anonymous }),
   }).eq("id", id).eq("owner_id", owner).select("id").maybeSingle();
 
   if (error?.code === "23505") return { error: "You already have a draft for this website." };
   if (error?.code === "23503") return { error: "Choose a valid startup category." };
+  if (error?.code === "42501" && anonymityChanged) return { error: "Anonymous listings aren’t enabled on this database yet. Apply the latest migration, then try again." };
   if (error || !data) return { error: "Couldn’t save your changes. Check your details and try again." };
   revalidatePath("/dashboard");
   revalidatePath(`/startup/${id}`);

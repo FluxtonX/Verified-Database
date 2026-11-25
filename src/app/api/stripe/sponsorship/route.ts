@@ -1,5 +1,6 @@
+import { revalidateTag } from "next/cache";
 import {
-  sponsorAdmin, stripeRequest, syncSponsorCheckout, syncSponsorSubscription, validStripeSignature,
+  sponsorAdmin, sponsorCatalogTag, stripeRequest, syncSponsorCheckout, syncSponsorSubscription, validStripeSignature,
   type Checkout,
 } from "@/lib/sponsor-billing";
 
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
     } else if (subscriptionEvents.has(event.type)) {
       await syncSponsorSubscription(admin, id, event.created);
     }
+    revalidateTag(sponsorCatalogTag, { expire: 0 }); // cards appear or disappear as subscriptions change
     return new Response(null, { status: 204 });
   } catch {
     return new Response("Could not reconcile sponsorship", { status: 500 });

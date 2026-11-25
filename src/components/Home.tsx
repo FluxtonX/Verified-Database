@@ -6,7 +6,6 @@ import { useRef, useState, type FormEvent, type MouseEvent } from "react";
 import Link from "next/link";
 import { setActivityLike } from "@/app/catalog-actions";
 import type { FeedRow, readHome } from "@/lib/catalog";
-import data from "@/data/homepage.json";
 import { Icon } from "@/components/icons";
 import AddStartupModal from "@/components/AddStartupModal";
 import SponsorPanel from "@/components/SponsorPanel";
@@ -19,32 +18,6 @@ type Listing = Catalog["recent"][number];
 type Startup = Catalog["startups"][number];
 
 const compact = { format: compactMoney };
-
-/** Parses display amounts such as "$3,569,654", "$3.1k" or "$1.2M". */
-function parseMoney(value: string) {
-  const match = value.replace(/[$,\s]/g, "").match(/^(-?[\d.]+)([kKmMbB]?)$/);
-  if (!match) return 0;
-  const scale = { k: 1e3, m: 1e6, b: 1e9 }[match[2].toLowerCase() as "k" | "m" | "b"] ?? 1;
-  return parseFloat(match[1]) * scale;
-}
-
-const demoListings = (listings: typeof data.recent): Listing[] => listings.map(listing => ({
-  ...listing, id: undefined, featured: listing.name === "Penmo", multipleValue: parseFloat(listing.multiple) || null,
-}));
-
-const demoStartups = (): Startup[] => data.startups.map(startup => ({
-  ...startup, includesNonrecurring: [1, 2, 8].includes(startup.rank), mrrValue: parseMoney(startup.mrr),
-}));
-
-/* Shown only when no database is connected; clearly labelled as sample content. */
-const samplePosts = [
-  { author: "Maya R.", project: "Inkwell", time: "2h", text: "Crossed $4k MRR this week. Annual plans are now 40% of new signups." },
-  { author: "Tomás", project: "ShipNote", time: "5h", text: "Listed ShipNote today. Looking for a buyer who’ll keep the free tier alive for students." },
-  { author: "Priya K.", project: "Quietly", time: "9h", text: "Founders who sold: how long was it from first message to close?\n\nTrying to plan around it." },
-  { author: "Jon B.", project: "Formcat", time: "1d", text: "Shipped the Zapier integration. Churn went from 6% to 4.1% in a month." },
-  { author: "Lena", project: "Tabular", time: "1d", text: "Accepted an offer. Diligence and escrow ran through a third party, and it was smoother than I expected." },
-  { author: "Sam O.", project: "PingPal", time: "2d", text: "Three buyers messaged in the first 48 hours after listing. Didn’t expect that." },
-];
 
 function Logo({ name, src, className }: { name: string; src?: string; className: string }) {
   return src ? <img className={className} src={src} width="36" height="36" alt="" loading="lazy" />
@@ -111,7 +84,7 @@ function LeaderRow({ startup }: { startup: Startup }) {
     </td>
     <td className={styles.mrrCell}>
       {startup.mrr}
-      {startup.includesNonrecurring && <span className={styles.nonrecurring} title="Includes usage-based or one-time payments"><Icon name="warning" size={12} /></span>}
+      {startup.measuredOn && <small className={styles.asOf}>as of {startup.measuredOn}</small>}
     </td>
     <td className={styles.growthCell}>
       <span className={flat ? styles.growthFlat : startup.negative ? styles.growthDown : styles.growthUp}>
@@ -119,16 +92,6 @@ function LeaderRow({ startup }: { startup: Startup }) {
       </span>
     </td>
   </tr>;
-}
-
-function SamplePost({ post }: { post: (typeof samplePosts)[number] }) {
-  return <article className={styles.post}>
-    <header className={styles.postHead}>
-      <span className={styles.postAvatar} aria-hidden="true">{post.author[0]}</span>
-      <div><strong>{post.author}</strong><span>on {post.project} · {post.time}</span></div>
-    </header>
-    <p className={styles.postText}>{post.text}</p>
-  </article>;
 }
 
 function LivePost({ post, signedIn }: { post: FeedRow; signedIn: boolean }) {
@@ -176,8 +139,9 @@ const buyerSteps = [
   ["Close on your terms", "Run diligence, legal and escrow with the seller, using the advisors you trust."],
 ];
 
-export default function Home({ catalog, signedIn, openSubmission, sponsors, sponsorPrice, sponsorCheckout, publishedSponsor }: {
-  catalog: Catalog | null;
+export default function Home({ catalog, sample, signedIn, openSubmission, sponsors, sponsorPrice, sponsorCheckout, publishedSponsor }: {
+  catalog: Catalog;
+  sample: boolean;
   signedIn: boolean;
   openSubmission: boolean;
   sponsors: SponsorCatalog | null;
@@ -191,17 +155,14 @@ export default function Home({ catalog, signedIn, openSubmission, sponsors, spon
   const [limit, setLimit] = useState(25);
   const [showAddStartup, setShowAddStartup] = useState(openSubmission);
   const trigger = useRef<HTMLButtonElement>(null);
-  const sample = !catalog;
-
-  const allStartups = catalog?.startups ?? demoStartups();
-  const recent = catalog?.recent ?? demoListings(data.recent);
-  const deals = catalog?.deals ?? demoListings(data.deals);
+  const { startups: allStartups, recent, deals, feed } = catalog;
+  const hasGrowth = allStartups.some(s => s.growth !== "—");
 
   const needle = query.trim().toLowerCase();
   const matches = (text: string) => text.toLowerCase().includes(needle);
   const startups = allStartups.filter(s => matches(`${s.name} ${s.description} ${s.founder}`));
   const growthValue = (s: Startup) => s.growth === "—" ? -Infinity : parseFloat(s.growth) * (s.negative ? -1 : 1);
-  const sorted = metric === "growth" ? [...startups].sort((a, b) => growthValue(b) - growthValue(a)) : startups;
+  const sorted = metric === "growth" && hasGrowth ? [...startups].sort((a, b) => growthValue(b) - growthValue(a)) : startups;
   const shownListings = (tab === "recent" ? recent : deals).filter(l => matches(`${l.name} ${l.category}`)).slice(0, 7);
 
   const uniqueListings = [...new Map([...recent, ...deals].map(l => [l.id ?? l.name, l])).values()];
@@ -231,7 +192,7 @@ export default function Home({ catalog, signedIn, openSubmission, sponsors, spon
       {publishedSponsor && <p className={styles.notice} role="status">
         {publishedSponsor.name} is now live as a sponsor. <Link href="/advertise">Manage sponsorship →</Link>
       </p>}
-      {catalog?.failed && <p className={styles.notice} role="alert">Some startup data is temporarily unavailable.</p>}
+      {catalog.failed && <p className={styles.notice} role="alert">Some startup data is temporarily unavailable.</p>}
 
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
@@ -258,7 +219,7 @@ export default function Home({ catalog, signedIn, openSubmission, sponsors, spon
         <aside className={styles.board} aria-label="Market snapshot">
           <div className={styles.boardHead}>
             <span className={styles.eyebrow}><span className={styles.liveDot} />Market snapshot</span>
-            {sample ? <span className={styles.sampleTag}>Sample data</span> : <span className={styles.boardSub}>Updated live</span>}
+            {sample ? <span className={styles.sampleTag}>Sample data</span> : <span className={styles.boardSub}>As of last verification</span>}
           </div>
           <dl className={styles.boardStats}>
             {stats.map(stat => <div key={stat.label}><dt>{stat.label}</dt><dd>{stat.value}</dd></div>)}
@@ -275,7 +236,7 @@ export default function Home({ catalog, signedIn, openSubmission, sponsors, spon
             <p>Be one of the first founders on the leaderboard — it takes about two minutes.</p>
             <button type="button" className={styles.secondary} onClick={openAdd}>Claim a spot <Icon name="chevron" size={12} /></button>
           </div>}
-          <p className={styles.boardNote}><Icon name="shield" size={13} />Figures come from each founder’s connected payment provider.</p>
+          <p className={styles.boardNote}><Icon name="shield" size={13} />Figures come from each founder’s payment provider at their latest verification.</p>
         </aside>
       </section>
 
@@ -334,10 +295,10 @@ export default function Home({ catalog, signedIn, openSubmission, sponsors, spon
               <span className={styles.eyebrow}>Leaderboard</span>
               <h2 id="leaderboard-heading">Top startups by revenue</h2>
             </div>
-            <div className={styles.segmented} role="group" aria-label="Sort leaderboard">
+            {hasGrowth && <div className={styles.segmented} role="group" aria-label="Sort leaderboard">
               <button aria-pressed={metric === "mrr"} onClick={() => setMetric("mrr")}>MRR</button>
               <button aria-pressed={metric === "growth"} onClick={() => setMetric("growth")}>MoM growth</button>
-            </div>
+            </div>}
           </div>
           {sample && <p className={styles.sampleNote}>Sample data · connect Supabase to show live founders.</p>}
           {sorted.length > 0 && <div className={styles.tableWrap}>
@@ -354,7 +315,7 @@ export default function Home({ catalog, signedIn, openSubmission, sponsors, spon
         </aside>
       </section>
 
-      <section className={styles.section} id="feed" aria-labelledby="feed-heading">
+      {feed.length > 0 && <section className={styles.section} id="feed" aria-labelledby="feed-heading">
         <div className={styles.sectionHead}>
           <div>
             <span className={styles.eyebrow}>Founder updates</span>
@@ -363,11 +324,9 @@ export default function Home({ catalog, signedIn, openSubmission, sponsors, spon
           {sample && <span className={styles.sampleTag}>Sample updates</span>}
         </div>
         <div className={styles.feed}>
-          {catalog ? catalog.feed.map(post => <LivePost post={post} signedIn={signedIn} key={post.id} />)
-            : samplePosts.map(post => <SamplePost post={post} key={post.author + post.time} />)}
+          {feed.map(post => <LivePost post={post} signedIn={signedIn && !sample} key={post.id} />)}
         </div>
-        {catalog && !catalog.feed.length && <p className={styles.empty}>No updates yet. Founders who list can share milestones here.</p>}
-      </section>
+      </section>}
 
       <SiteCta onList={openAdd}
         title={<>Someone is looking for a startup like yours <em>right now.</em></>}

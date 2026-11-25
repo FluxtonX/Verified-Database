@@ -240,19 +240,11 @@ export default function AddStartupModal({ onClose, triggerRef, signedIn, next, s
             <input id="startup-x-handle" name="x-handle" type="text" placeholder="username" autoComplete="off" spellCheck={false} maxLength={16} />
           </div>}
 
-          <figure className="startup-testimonial">
-            <div className="startup-testimonial-stars" role="img" aria-label="5 out of 5 stars">
-              {Array.from({ length: 5 }, (_, index) => (
-                <svg key={index} width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2.5 2.8 5.7 6.3.9-4.6 4.4 1.1 6.3-5.6-3-5.6 3 1.1-6.3L2.9 9.1l6.3-.9Z" /></svg>
-              ))}
-            </div>
-            <blockquote>“The ROI has been outstanding – tons of new signups, new trials booked. Over 60% of my traffic this week came from VerifedDB. Money well spent.”</blockquote>
-            <figcaption>
-              <img src="/assets/testimonial-ryan.jpg" width="20" height="20" alt="" />
-              <span>Ryan Vogel</span><span className="testimonial-business">· Inbound Email</span>
-            </figcaption>
-            <div className="startup-testimonial-dots" aria-hidden="true"><span /><span /><span className="active" /><span /></div>
-          </figure>
+          <ol className="startup-next-steps" aria-label="What happens next">
+            <li><strong>We read your revenue once.</strong> The key is used for this import and never stored.</li>
+            <li><strong>You get a private draft.</strong> Only you can see it until you choose to publish.</li>
+            <li><strong>You decide what goes public.</strong> Add details, set a price, and list it when you’re ready.</li>
+          </ol>
         </div>
 
         <div className="startup-dialog-footer">

@@ -1,6 +1,5 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
 import type { SponsorCatalog, SponsorPrice } from "@/lib/sponsorship";
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
@@ -10,15 +9,9 @@ import { SiteCta, SiteFooter, SiteHeader } from "./SiteChrome";
 import { compactMoney, median } from "@/lib/format";
 import MarketplaceListingCard from "./MarketplaceListingCard";
 import AddStartupModal from "./AddStartupModal";
-import founders from "@/data/acquire-founders.json";
-import { marketplaceStartups, marketplaceSorts } from "@/data/acquire";
+import { marketplaceSorts } from "@/lib/marketplace-sorts";
 
 import type { MarketplaceCardData as Startup } from "@/lib/catalog";
-
-const demoListings: Startup[] = marketplaceStartups.map(startup => ({
-  ...startup, mrr: null, margin: null, foundedOn: null, listedAt: null,
-  country: null, audience: null, mobileApp: null,
-}));
 
 const countries = {
   US: "United States", GB: "United Kingdom", CA: "Canada", DE: "Germany", PK: "Pakistan",
@@ -36,23 +29,6 @@ function RangeField({ label, percentage, value, onChange }: {
 
 function FilterSelect({ label, options, value, onChange }: { label: string; options: string[]; value: string; onChange: (value: string) => void }) {
   return <label className={`marketplace-filter-field${label === "Country" ? " marketplace-country" : ""}`}><span>{label}</span><span className="marketplace-select"><select value={value} onChange={e => onChange(e.target.value)}>{options.map(option => <option key={option}>{option}</option>)}</select></span></label>;
-}
-
-const founderPosts = [
-  { text: "My startup SocialKit was acquired on @Trust_MRR 🎉\n\nSold for $85K\n($75K sale + $10K consultation)\n\nI grew SocialKit to $3.3K MRR + ~$800/mo one-time payments. And it's already at $3.8K mrr :)\n\nTook me a year to get there, now growing PostPeer.dev...", date: "5:54 PM · Aug 16, 2026", likes: "1.1K" },
-  { text: "Just sold my SAAS 🎉\n\nso excited for whats next 🕵️", date: "10:28 PM · Aug 5, 2026", likes: "447" },
-  { text: "Just sold my SaaS for $5,000 on @TrustMRR! 🎉\n\nIf you're looking to buy or sell a startup with verified revenue, check them out. great platform by @marclou", date: "", likes: "" },
-  { text: "✅ ACQUIRED FOR $63,000\n\nThe maker @AvalonYoav23747 spent 2 years doing organic dropshipping. He noticed everything was manual, so he built a tool to automate it.\n\nMVP in 2 weeks.\nFirst user in 3 days.\n100% organic traction.\n...", date: "", likes: "" },
-];
-
-function FounderTestimonials() {
-  return <section className="marketplace-founders"><h2>Founders who sold on VerifedDB</h2><div className="marketplace-founder-grid">{founders.map((founder, index) => <article className="marketplace-founder-post" key={founder.handle}>
-    <div className="founder-post-header"><img src={founder.avatar} width="42" height="42" alt="" loading="lazy" /><div><strong>{founder.name}{index > 0 && <span className="founder-verified">✓</span>}</strong><span>@{founder.handle}</span></div><span className="founder-x" aria-label="X">𝕏</span></div>
-    <p>{founderPosts[index].text.split(/(@[A-Za-z_0-9]+|PostPeer\.dev)/g).map((part, i) => part.startsWith("@") || part === "PostPeer.dev" ? <span className="founder-post-mention" key={i}>{part}</span> : part)}</p>
-    {founder.image && <img className="founder-sale-image" src={founder.image} alt={`Startup sale shared by ${founder.name}`} loading="lazy" />}
-    {founderPosts[index].date && <p className="founder-post-date">{founderPosts[index].date}</p>}
-    <div className="founder-post-actions"><span className="founder-likes">♥</span><span>{founderPosts[index].likes}</span><span className="founder-reply">●</span><span>Reply</span><span>↗</span><span>Copy link</span></div>
-  </article>)}</div></section>;
 }
 
 export default function AcquireMarketplace({ listings, configured, failed, categories, signedIn, openSubmission, sponsors, sponsorPrice, sponsorCheckout, savedIds = [], ownedIds = [], buyerReady = false, buyerActivityFailed = false }: {
@@ -89,7 +65,7 @@ export default function AcquireMarketplace({ listings, configured, failed, categ
     return () => { document.removeEventListener("click", closeSort); document.removeEventListener("keydown", escapeSort); };
   }, []);
 
-  const source = configured ? listings ?? [] : demoListings;
+  const source = listings ?? [];
   const categoryOptions = [...new Set([...categories, ...source.map(startup => startup.category)])].sort();
   const countryOptions = [...new Set([...Object.values(countries), ...source.flatMap(startup =>
     startup.country ? [countryNames.of(startup.country) ?? startup.country] : [],
@@ -185,11 +161,14 @@ export default function AcquireMarketplace({ listings, configured, failed, categ
         <div className="marketplace-card-grid">{startups.slice(0, limit).map(startup => <MarketplaceListingCard startup={startup} key={startup.id} saved={savedIds.includes(startup.id)} owned={ownedIds.includes(startup.id)} signedIn={signedIn} ready={buyerReady} sample={!configured} />)}</div>
         {!startups.length && !failed && <p className="marketplace-empty">{source.length ? "No startups match these filters." : "No startups are listed yet. Founders who list now get seen first."}</p>}
         {startups.length > limit && <div className="load-more"><button onClick={() => setLimit(limit + 24)}>Show more</button></div>}
-        {!signedIn && <section className="marketplace-locked" aria-labelledby="marketplace-gate-title">
-          <div className="marketplace-card-grid locked-card-grid" aria-hidden="true" inert>{demoListings.slice(0, 4).map((startup, index) => <MarketplaceListingCard key={startup.id} sample startup={{ ...startup, name: ["Get Founders", "Unnamed Company", "Figmentor", "Private Startup"][index], featured: index === 0 }} />)}</div>
-          <div className="marketplace-gate"><span className="marketplace-lock"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><rect x="3" y="10" width="18" height="12" rx="2" /><path d="M7 10V6a5 5 0 0 1 10 0v4" /></svg></span><h2 id="marketplace-gate-title">Browse the full marketplace</h2><p>Create a free account to see all available listings.</p><Link href="/login?next=%2Facquire" className="marketplace-account-link">Create free account</Link><Link href="/#how-it-works" className="marketplace-affiliate-link">How buying works <span>→</span></Link></div>
+        {!signedIn && configured && <section className="marketplace-join" aria-labelledby="marketplace-join-title">
+          <span className="marketplace-lock" aria-hidden="true"><Icon name="heart" size={22} /></span>
+          <div>
+            <h2 id="marketplace-join-title">Found one you like?</h2>
+            <p>Create a free account to save startups, message founders and send acquisition inquiries.</p>
+          </div>
+          <Link href="/login?next=%2Facquire" className="marketplace-account-link">Create free account</Link>
         </section>}
-        {!configured && <FounderTestimonials />}
         </div>
         <div className="marketplace-sponsors">
           <SponsorPanel catalog={sponsors} price={sponsorPrice} enabled={sponsorCheckout} placement="marketplace" />

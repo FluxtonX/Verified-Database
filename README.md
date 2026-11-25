@@ -1,6 +1,6 @@
 # VerifedDB
 
-VerifedDB has a public startup leaderboard, an acquisition marketplace, and passwordless sign-in. The existing page layouts also run with sample data when the Supabase environment variables are unset.
+VerifedDB has a public startup leaderboard, an acquisition marketplace, and passwordless sign-in. The pages also run with a small, entirely fictional sample dataset (`src/data/sample.ts`, server-only) when the Supabase environment variables are unset. Never add real companies or people to it.
 
 ## Run locally
 
@@ -52,6 +52,7 @@ Run `npm test`, `npm run lint`, and `npm run build` with Node.js 22 or later. `t
 
 ```sh
 psql "$LOCAL_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/marketplace.sql
+psql "$LOCAL_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/trust-fixes.sql
 ```
 
 The SQL test rolls back its fixtures. For release acceptance, use two test accounts to verify OAuth callbacks and connect test provider accounts to exercise fresh-provider publishing. Do not use production credentials or publish test businesses into the live catalog.
@@ -67,3 +68,24 @@ Register `/api/stripe/sponsorship` for `checkout.session.completed`, `checkout.s
 Sponsor cards on home, marketplace, and mobile automatically add `utm_source=verifeddb&utm_medium=referral&utm_campaign=sponsor_card` at render time, so existing catalog records work without a database migration. Old UTM tags are replaced; landing-page paths, fragments, and legitimate partner parameters are preserved. The copied Higgsfield `/marclou` destination and reference `ref=trustmrr` attribution are removed. Use a partner URL issued to VerifedDB if affiliate attribution is required.
 
 Sponsors with GA4 installed can view `verifeddb / referral` under **Reports → Acquisition → Traffic acquisition**, using Session source / medium and Session campaign. Their redirects must preserve the campaign parameters until analytics records the landing. Leads and sales require conversion/key-event tracking on the sponsor's site; URL tags alone do not report those conversions back to VerifedDB. See [Google's campaign URL guide](https://support.google.com/analytics/answer/10917952?hl=en).
+
+## Trust fixes (2026-11-25)
+
+Apply `supabase/migrations/20261125000000_trust_fixes.sql` before or together with the matching code deploy. It:
+
+- deletes the ten `seed` sponsor rows, which listed companies that never bought a sponsorship (the app already hides them, so the order of deploy and migration doesn't matter);
+- lets founders turn on **List anonymously** in startup details (takes effect on their next publish);
+- adds `measured_on` to the `leaderboard` view, so figures show an "as of" date;
+- computes month-over-month growth from a verification 25–35 days earlier instead of always storing null;
+- treats relisting a withdrawn startup as newly listed.
+
+Until the migration is applied, startup details still save; only turning anonymity on or off reports that the database needs updating. `tests/trust-fixes.sql` covers these changes.
+
+
+Also apply `supabase/migrations/20261125000100_withdrawal_notice.sql`: when a seller withdraws a listing, buyers with an open inquiry or conversation get a message in their thread instead of a silent "Declined".
+
+## Security headers and caching
+
+`next.config.ts` sets a Content-Security-Policy (no framing, restricted form targets), `X-Frame-Options`, `nosniff`, `Referrer-Policy` and `Permissions-Policy`, and disables `X-Powered-By`. If you add a third-party script, font or form destination, extend the policy there.
+
+The Stripe sponsor price (1 hour), categories (1 day) and sponsor catalog (5 minutes) are cached on the server. Publishing a sponsor card, reserving a slot, and Stripe subscription webhooks refresh the sponsor catalog immediately.

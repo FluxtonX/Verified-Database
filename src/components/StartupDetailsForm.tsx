@@ -29,6 +29,7 @@ export type StartupDetails = {
   pricing: string;
   additional_info: string;
   imported_logo_url: string | null;
+  anonymous: boolean;
 };
 
 export default function StartupDetailsForm({ startup, logoUrl, categories = [] }: { startup: StartupDetails; logoUrl?: string; categories?: string[] }) {
@@ -59,6 +60,14 @@ export default function StartupDetailsForm({ startup, logoUrl, categories = [] }
           <label>Google Play <input name="google-play" type="url" defaultValue={startup.google_play_url ?? ""} maxLength={2048} placeholder="https://play.google.com/store/apps/details?id=..." disabled={!mobile} /></label>
         </div>
       </div>
+
+      <fieldset className="dashboard-section dashboard-privacy">
+        <legend>Privacy</legend>
+        <input type="hidden" name="anonymous-was" value={startup.anonymous ? "1" : "0"} />
+        <label className="dashboard-mobile"><span><strong>List anonymously</strong><small>Buyers see &ldquo;Unnamed Company&rdquo; with no name, logo, website, founding date or country. They still see category, revenue and price. Applies when you next verify and publish.</small></span>
+          <input name="anonymous" type="checkbox" defaultChecked={startup.anonymous} /></label>
+        <p className="muted">Turning this on later can&apos;t hide details buyers have already seen.</p>
+      </fieldset>
 
       <label>Markets <small>Up to 5, separated by commas</small><input name="markets" defaultValue={startup.markets.join(", ")} maxLength={504} /></label>
       <label>Tech stack <small>Up to 20, separated by commas</small><input name="tech-stack" defaultValue={startup.tech_stack.join(", ")} maxLength={2019} /></label>

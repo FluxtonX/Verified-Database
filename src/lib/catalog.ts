@@ -1,8 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { unstable_cache } from "next/cache";
 import { createSupabase } from "./supabase/server";
+import { publicSupabase } from "./supabase/public";
 
 export const dollars = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 export const compactDollars = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 });
+const shortDate = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 const compactCount = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
 
 type MarketplaceRow = {
@@ -59,20 +62,29 @@ export function marketplaceCard(row: MarketplaceRow) {
 
 export type MarketplaceCardData = ReturnType<typeof marketplaceCard>;
 
+// Categories change only through migrations; cache them for a day. Errors throw so they aren't cached.
+const cachedCategories = unstable_cache(async () => {
+  const supabase = publicSupabase();
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("categories").select("name").order("name").returns<{ name: string }[]>();
+  if (error) throw error;
+  return data.map(category => category.name);
+}, ["categories"], { revalidate: 86_400 });
+
+export async function readCategories() {
+  try {
+    return { categories: await cachedCategories(), failed: false };
+  } catch {
+    return { categories: [] as string[], failed: true };
+  }
+}
+
 export async function catalogContext() {
   const supabase = await createSupabase();
   if (!supabase) return null;
 
-  const [session, categories] = await Promise.all([
-    supabase.auth.getClaims(),
-    supabase.from("categories").select("name").order("name").returns<{ name: string }[]>(),
-  ]);
-  return {
-    supabase,
-    signedIn: Boolean(session.data?.claims.sub),
-    categories: categories.data?.map(category => category.name) ?? [],
-    failed: Boolean(categories.error),
-  };
+  const [session, { categories, failed }] = await Promise.all([supabase.auth.getClaims(), readCategories()]);
+  return { supabase, signedIn: Boolean(session.data?.claims.sub), categories, failed };
 }
 
 export async function readMarketplace(supabase: SupabaseClient) {
@@ -102,6 +114,8 @@ type LeaderboardRow = {
   mrr_cents: number;
   mrr_growth_pct: number | null;
   includes_nonrecurring: boolean;
+  /** Added by migration 20261125000000; absent on older databases. */
+  measured_on?: string | null;
 };
 
 export type FeedRow = {
@@ -149,6 +163,7 @@ export async function readHome(supabase: SupabaseClient) {
       growth: row.mrr_growth_pct === null ? "—" : `${Math.abs(row.mrr_growth_pct)}%`,
       negative: (row.mrr_growth_pct ?? 0) < 0,
       includesNonrecurring: row.includes_nonrecurring,
+      measuredOn: row.measured_on ? shortDate.format(new Date(`${row.measured_on}T00:00:00Z`)) : null,
     })),
     recent: (recent.data ?? []).map(listing),
     deals: (deals.data ?? []).map(listing),
