@@ -1,3 +1,4 @@
+import "server-only";
 import { revenueCatAppProfile, type RevenueCatApp } from "./revenuecat-app-profile";
 import { readStripeProfile } from "./stripe-profile";
 import { logError } from "./log";

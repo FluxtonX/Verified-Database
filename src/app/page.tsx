@@ -4,6 +4,8 @@ import { readHome } from "@/lib/catalog";
 import { createSupabase } from "@/lib/supabase/server";
 import { sampleHome } from "@/data/sample";
 import type { Metadata } from "next";
+import JsonLd from "@/components/JsonLd";
+import { appOrigin } from "@/lib/supabase/config";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
@@ -20,8 +22,16 @@ export default async function HomePage({ searchParams }: {
     supabase ? readSponsorPrice() : null,
   ]);
   const publishedSponsor = sponsors?.cards.find(card => card.id === params.publishedSponsor);
-  return <Home catalog={catalog ?? sampleHome()} sample={!supabase} signedIn={Boolean(session?.data?.claims.sub)}
+  const origin = appOrigin();
+  return <>
+  <JsonLd data={{
+    "@context": "https://schema.org", "@type": "WebSite", name: "VerifedDB", url: origin,
+    description: "The open market for indie startups with revenue from Stripe or RevenueCat.",
+    potentialAction: { "@type": "SearchAction", target: `${origin}/acquire?q={search_term_string}`, "query-input": "required name=search_term_string" },
+  }} />
+  <Home catalog={catalog ?? sampleHome()} sample={!supabase} signedIn={Boolean(session?.data?.claims.sub)}
     sponsors={sponsors} sponsorPrice={sponsorPrice} sponsorCheckout={sponsorCheckoutEnabled()}
     publishedSponsor={publishedSponsor}
-    openSubmission={params.submit === "1"} />;
+    openSubmission={params.submit === "1"} />
+  </>;
 }

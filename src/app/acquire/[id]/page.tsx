@@ -3,18 +3,25 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { createSupabase } from "@/lib/supabase/server";
-import { dollars, marketplaceCard, type MarketplaceCardData } from "@/lib/catalog";
+import { dollars, marketplaceCard, type MarketplaceCardData, type MarketplaceRow } from "@/lib/catalog";
 import { buyerUrl, isUuid } from "@/lib/buyer-dashboard";
 import { sampleListings } from "@/data/sample";
 import { ListingContact, SaveListingButton } from "@/components/BuyerForms";
 import StartupLogo from "@/components/StartupLogo";
 import { Icon } from "@/components/icons";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
+import JsonLd from "@/components/JsonLd";
+import { appOrigin } from "@/lib/supabase/config";
+
+type Details = {
+  website_url: string | null; product_details: Record<string, unknown>;
+  revenue_provider: string; verified_at: string | null; measured_on: string; is_owner: boolean;
+};
 
 // Shared by generateMetadata and the page, so the listing is read once per request.
 const readListing = cache(async (id: string) => {
   const supabase = await createSupabase();
-  return supabase && isUuid(id) ? supabase.from("marketplace_details").select("*").eq("id", id).maybeSingle() : null;
+  return supabase && isUuid(id) ? supabase.from("marketplace_details").select("*").eq("id", id).maybeSingle<MarketplaceRow & Details>() : null;
 });
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -28,10 +35,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     + ` with ${listing.revenueLabel} revenue in the last 30 days${listing.multiple === null ? "" : ` (${listing.multiple.toFixed(1)}x annual revenue)`}. Message the founder on VerifedDB.`;
   return { title, description, alternates: { canonical: `/acquire/${id}` }, openGraph: { title, description, type: "website" } };
 }
-type Details = {
-  website_url: string | null; product_details: Record<string, unknown>;
-  revenue_provider: string; verified_at: string | null; measured_on: string; is_owner: boolean;
-};
 export default async function ListingPage({ params, searchParams }: {
   params: Promise<{ id: string }>; searchParams: Promise<{ intent?: string }>;
 }) {
@@ -62,7 +65,7 @@ export default async function ListingPage({ params, searchParams }: {
         supabase.from("buyer_conversations").select("id").eq("listing_id", id).maybeSingle(),
       ]);
       if (saveResult.error || buyerResult.error || thread.error) throw new Error("Couldn’t load your activity for this listing. Please refresh.");
-      saved = Boolean(saveResult.data); ready = Boolean(buyerResult.data); conversation = thread.data?.id;
+      saved = Boolean(saveResult.data); ready = Boolean(buyerResult.data); conversation = thread.data?.id ?? undefined;
     }
   } else {
     const sample = sampleListings.find(item => item.id === id);
@@ -75,7 +78,14 @@ export default async function ListingPage({ params, searchParams }: {
     ["Profit margin · seller reported", startup.margin == null ? null : `${startup.margin}%`],
   ].filter(([, value]) => value);
   const product = Object.entries(details?.product_details ?? {}).filter((entry): entry is [string, string] => typeof entry[1] === "string" && Boolean(entry[1]));
-  return <><SiteHeader signedIn={signedIn} current="marketplace" next={destination} /><main className="listing-page"><nav className="listing-nav" aria-label="Listing navigation"><Link className="listing-back" href="/acquire">← Marketplace</Link>{signedIn && <Link href={buyerUrl()} className="seller-button">Buyer workspace <Icon name="chevron" size={14} /></Link>}</nav>
+  return <><SiteHeader signedIn={signedIn} current="marketplace" next={destination} /><JsonLd data={{
+    "@context": "https://schema.org", "@type": "Product",
+    name: startup.private ? `Confidential ${startup.category} business` : startup.name,
+    description: startup.description || `A ${startup.category.toLowerCase()} business for sale.`,
+    category: startup.category,
+    url: `${appOrigin()}/acquire/${id}`,
+    offers: { "@type": "Offer", price: startup.price, priceCurrency: "USD", availability: "https://schema.org/InStock", url: `${appOrigin()}/acquire/${id}` },
+  }} /><main className="listing-page"><nav className="listing-nav" aria-label="Listing navigation"><Link className="listing-back" href="/acquire">← Marketplace</Link>{signedIn && <Link href={buyerUrl()} className="seller-button">Buyer workspace <Icon name="chevron" size={14} /></Link>}</nav>
     {!supabase && <p className="listing-sample-note">Sample listing · Sign-in and seller contact require a connected marketplace.</p>}
     <header className="listing-header"><StartupLogo name={startup.name} src={startup.logo || undefined} /><div><span className="workspace-eyebrow">{startup.category}</span><h1>{startup.name}</h1><p className="muted">{startup.private ? "Confidential acquisition opportunity" : "A new chapter starts here"}</p></div>{supabase && !details?.is_owner && <SaveListingButton key={id} id={id} saved={saved} signedIn={signedIn} ready={ready} />}</header>
     <div className="listing-layout"><div><section className="seller-card listing-about"><h2>The opportunity</h2><p>{startup.description || "The seller is keeping this business confidential. Reach out to learn more."}</p>{startup.private && <div className="listing-confidential"><Icon name="shield" size={19} /><p className="muted">Company identity is private. Discuss access to sensitive details directly with the seller.</p></div>}

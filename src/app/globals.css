@@ -1,5 +1,5 @@
 /* ---------- Design tokens (shared by every page) ---------- */
-:root{
+:root {
   --paper:#f5f3ee;--card:#fff;--ink:#121212;--ink-2:#57544d;--ink-3:#6b675e;
   --line:#e2ded4;--line-soft:#ece9e1;--accent:#0d7a4c;--accent-soft:#e4f3ea;--accent-line:#bfe0cc;
   --lime:#b7f36b;--sale-bg:#fff0c2;--sale-ink:#7a4b00;--down:#c2352b;--down-soft:#fbe6e3;
@@ -40,12 +40,9 @@ button svg, a svg{flex-shrink:0}
 .hero-actions{display:flex;align-items:stretch;gap:10px;max-width:580px}
 .add-startup{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:50px;padding:0 20px;border:0;border-radius:12px;background:var(--ink);color:#fff;font-size:15px;font-weight:600;white-space:nowrap}
 .add-startup:hover{background:#2b2b2b}
-.load-more{text-align:center;margin-top:24px}
-.load-more button{height:40px;padding:0 20px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-weight:600}
-.load-more button:hover{border-color:var(--ink-3)}
-@media(max-width:600px){.hero-actions{flex-direction:column}.search-box,.add-startup{flex:0 0 auto;height:48px}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
 
+@media(max-width:600px) {.hero-actions{flex-direction:column}.search-box,.add-startup{flex:0 0 auto;height:48px}}
+@media(prefers-reduced-motion:reduce) {html{scroll-behavior:auto}*{transition:none!important}}
 
 /* Add startup dialog */
 .startup-dialog {
@@ -146,12 +143,6 @@ button svg, a svg{flex-shrink:0}
   .startup-dialog-footer { padding: 16px 20px; }
 }
 
-.startup-terms { margin-top: 44px; text-align: center; font-size: 11px; line-height: 18px; color: var(--muted); }
-.startup-terms span { text-decoration: underline; text-underline-offset: 2px; }
-@media (max-width: 479px) {
-  .startup-terms { margin-top: 32px; }
-}
-
 /* Logged-out dashboard entry */
 .login-page {
   min-height: 100svh;
@@ -209,9 +200,7 @@ button svg, a svg{flex-shrink:0}
 .marketplace-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .marketplace-card { position: relative; overflow: hidden; min-width: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--paper); }
 .marketplace-card.promoted { background: var(--accent-soft); }
-.marketplace-card-activity { position: absolute; top: 0; right: 0; display: flex; align-items: center; gap: 4px; padding: 5px 8px; background: var(--accent-soft); border-bottom-left-radius: 10px; font-size: 10px; line-height: 13px; }
-.marketplace-card-activity svg { color: var(--muted); }
-.marketplace-card-activity svg:nth-of-type(2) { margin-left: 4px; }
+
 .marketplace-card-body { padding: 16px 16px 20px; }
 .marketplace-card-identity { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .marketplace-logo { flex-shrink: 0; width: 48px; height: 48px; border-radius: 14px; object-fit: cover; box-shadow: 0 1px 2px #0001; font-size: 20px; }
@@ -263,7 +252,6 @@ button svg, a svg{flex-shrink:0}
 .marketplace-country .marketplace-select::before { content: '−'; position: absolute; display: grid; place-items: center; left: 12px; top: 12px; width: 30px; height: 24px; border: 1px solid var(--border); border-radius: 4px; background: var(--paper); color: var(--muted); font-size: 14px; pointer-events: none; }
 .marketplace-country .marketplace-select::after { display: none; }
 .marketplace-country select { height: 50px; padding-left: 56px; padding-right: 8px; font-size: 14px; color: var(--foreground); box-shadow: none; border-radius: 10px; }
-
 
 /* Seller dashboard */
 .seller-dashboard { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 100dvh; }
@@ -417,20 +405,13 @@ button svg, a svg{flex-shrink:0}
 .seller-button:hover:not(:disabled) { background: var(--paper); }
 .seller-button:disabled { opacity: .7; cursor: default; }
 .seller-inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.seller-section { max-width: 980px; margin: 28px 24px; }
-.seller-section h1 { margin: 0 0 8px; font-size: 26px; line-height: 1.2; letter-spacing: -.5px; }
-.seller-section h1 + .seller-card { margin-top: 24px; }
-.seller-description { margin: 0 0 26px; color: var(--muted); font-size: 16px; }
-.seller-narrow { max-width: 600px; }
-.seller-interested { max-width: 710px; }
+
 .seller-profile-page { max-width: 930px; }
 .seller-stack { display: grid; gap: 24px; }
 .seller-card { min-width: 0; padding: 24px; background: #fff; border: 1px solid var(--border); border-radius: 14px; }
 .seller-card h2, .seller-notice h2 { margin: 0 0 8px; font-size: 18px; line-height: 1.3; }
 .seller-card .muted + .startup-submit { margin-top: 14px; }
-.seller-interest-empty { min-height: 350px; display: grid; justify-items: center; align-content: center; text-align: center; padding: 30px; }
-.seller-interest-empty > span { display: grid; place-items: center; width: 84px; height: 84px; background: var(--paper); color: var(--muted); border-radius: 16px; margin-bottom: 22px; }
-.seller-interest-empty p { max-width: 365px; line-height: 1.7; color: var(--muted); }
+
 .seller-interest-list { padding: 0; overflow: hidden; }
 .seller-interest-list article { display: flex; align-items: center; gap: 12px; padding: 16px 20px; }
 .seller-interest-list article + article { border-top: 1px solid var(--border); }
@@ -440,23 +421,15 @@ button svg, a svg{flex-shrink:0}
 .seller-inbox { display: grid; grid-template-columns: minmax(245px, 22%) minmax(0, 1fr); margin: 16px 24px; min-height: calc(100dvh - 32px); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: #fff; }
 .seller-inbox-list { border-right: 1px solid var(--border); }
 .seller-inbox-list .dashboard-panel-header { gap: 8px; }
-.seller-icon-button { width: 34px; padding: 0; }
-.seller-icon-button[aria-current] { background: var(--line-soft); }
-.seller-folder { position: relative; }
-.seller-folder summary { min-width: 100px; justify-content: space-between; cursor: pointer; list-style: none; }
-.seller-folder summary::-webkit-details-marker { display: none; }
-.seller-folder > div { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 1; display: grid; padding: 4px; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 3px 10px #0001; }
-.seller-folder a { padding: 6px; border-radius: 4px; }
-.seller-folder a:hover { background: var(--paper); }
-.seller-inbox-content { min-width: 0; display: grid; grid-template-rows: minmax(405px, 1fr) minmax(240px, .85fr); }
+
 .seller-messages { min-width: 0; display: flex; flex-direction: column; }
-.seller-select-thread { text-align: center; margin-top: clamp(60px, 15vh, 150px); color: var(--muted); }
+
 .seller-acquisition { border-top: 1px solid var(--border); }
 .seller-acquisition dl { display: grid; gap: 10px; padding: 20px; margin: 0; }
 .seller-acquisition dl div { display: flex; gap: 12px; }
 .seller-acquisition dt { color: var(--muted); }
 .seller-acquisition dd { margin: 0; overflow-wrap: anywhere; }
-.seller-thread-row > span:last-child { min-width: 0; }
+
 .seller-message-list { display: grid; gap: 10px; align-content: end; padding: 16px; flex: 1; }
 .seller-message { max-width: min(100%, 520px); justify-self: start; padding: 10px 14px; border-radius: 10px; background: var(--paper); }
 .seller-message.from-seller { justify-self: end; background: var(--accent-soft); }
@@ -514,9 +487,7 @@ button svg, a svg{flex-shrink:0}
 .seller-startup-blue { background: #f4fbe8; border-color: #d6eeb0; }
 .seller-startup-blue > span { color: var(--ink); background: var(--lime); }
 .seller-startup-blue a { color: var(--ink); }
-.seller-startup-green { background: var(--accent-soft); border-color: var(--accent-line); }
-.seller-startup-green > span { color: var(--accent); background: var(--accent-line); }
-.seller-listing-action .seller-button { background: transparent; color: var(--accent); box-shadow: none; border-color: var(--accent-line); }
+
 .dashboard-startup-row > span:last-child { min-width: 0; }
 .dashboard-startup-row small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -529,11 +500,11 @@ button svg, a svg{flex-shrink:0}
   .dashboard-sidebar-account p { margin: 0; }
   .dashboard-sidebar-account small { flex-shrink: 0; }
   .dashboard-sidebar-account form { flex-shrink: 0; }
-  .seller-section, .seller-inbox { margin: 18px 12px; }
+  .seller-inbox { margin: 18px 12px; }
   .seller-inbox { grid-template-columns: 1fr; }
   .seller-inbox-list { border-right: 0; border-bottom: 1px solid var(--border); }
-  .seller-inbox-content { grid-template-rows: minmax(220px, 1fr) minmax(140px, auto); }
-  .seller-select-thread { margin-top: 65px; }
+  
+  
   .seller-card, .seller-notice { padding: 16px; }
   .seller-startup-banner { margin: 14px 16px 0; flex-wrap: wrap; }
 }
@@ -543,19 +514,6 @@ button svg, a svg{flex-shrink:0}
   .seller-verification-badge { margin-left: 0; }
   .seller-interest-list article { flex-wrap: wrap; }
 }
-
-.dashboard-mode-dialog {
-  position: fixed; top: 16px; width: min(460px, calc(100vw - 32px)); margin: 0 auto; padding: 22px;
-  border: 1px solid var(--border); border-radius: 16px; background: var(--card); color: var(--ink); box-shadow: 0 14px 26px #0003;
-}
-.dashboard-mode-dialog::backdrop { background: #0009; }
-.dashboard-mode-dialog h2 { font-family: var(--sans); font-size: 16px; margin: 0 0 10px; }
-.dashboard-mode-dialog p { font-family: var(--sans); }
-.dashboard-mode-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
-.dashboard-mode-dialog .dashboard-mode-actions button {
-  min-width: 76px; padding: 8px 16px; border: 0; border-radius: 24px; font: 600 13px var(--sans); color: var(--ink); background: var(--paper);
-}
-.dashboard-mode-dialog .dashboard-mode-actions button:last-child { color: #fff; background: var(--ink); }
 
 /* A shared acquisition workspace, using the existing type and color system. */
 .marketplace-workspace { grid-template-columns: 224px minmax(0, 1fr); background: var(--background); }
@@ -660,11 +618,10 @@ button svg, a svg{flex-shrink:0}
 .save-listing-error { position: absolute; right: 0; top: 40px; z-index: 3; width: 230px; padding: 12px; border: 1px solid #e3b3b3; border-radius: 8px; background: #fff; color: var(--down); box-shadow: 0 4px 12px #0001; }
 .workspace-listing-grid .marketplace-metrics { grid-template-columns: 1fr 1fr; gap: 10px; }
 .workspace-listing-grid .marketplace-metrics > div:last-child { display: none; }
-.marketplace-workspace .seller-section { margin: 32px; }
-.marketplace-workspace .seller-narrow { max-width: 760px; }
+
 .marketplace-workspace .seller-stack { gap: 20px; }
 .marketplace-workspace .seller-inbox { margin: 32px; min-height: calc(100dvh - 128px); }
-.marketplace-workspace .seller-inbox-content { grid-template-rows: minmax(400px, 1fr) auto; }
+
 .marketplace-workspace .seller-inbox-list .dashboard-panel-header { flex-direction: column; align-items: flex-start; }
 .marketplace-workspace .seller-inbox-list h1 { flex-shrink: 0; }
 .seller-startups-page .dashboard-workspace { width: 100%; margin: 0; border: 0; border-radius: 0; gap: 20px; background: transparent; grid-template-columns: 240px minmax(0, 1fr); overflow: visible; }
@@ -675,7 +632,7 @@ button svg, a svg{flex-shrink:0}
 .publish-listing .workspace-heading { margin-bottom: 12px; flex-wrap: wrap; }
 .publish-details summary { cursor: pointer; color: var(--accent); padding: 10px 0 0; }
 .publish-details .seller-form { padding-top: 14px; }
-.publication-help { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--accent-line); }
+
 .listing-page { width: min(1100px, 100%); margin: 0 auto; padding: 32px 24px 64px; }
 .listing-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 32px; }
 .listing-header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; }
@@ -720,7 +677,7 @@ button svg, a svg{flex-shrink:0}
   .workspace-stats { gap: 10px; }
   .workspace-stat { padding: 14px; }
   .workspace-onboarding { flex-wrap: wrap; }
-  .marketplace-workspace .seller-section, .marketplace-workspace .seller-inbox { margin: 24px 20px; }
+  .marketplace-workspace .seller-inbox { margin: 24px 20px; }
   .seller-startups-page .dashboard-workspace { grid-template-columns: 1fr; }
   .buyer-inbox, .marketplace-workspace .seller-inbox { grid-template-columns: 1fr; }
   .buyer-thread-list { border-right: 0; border-bottom: 1px solid var(--border); max-height: 240px; overflow-y: auto; }
@@ -770,7 +727,7 @@ button svg, a svg{flex-shrink:0}
   .listing-header { gap: 12px; }
   .publish-listing { margin: 16px; padding: 14px; }
   .publish-listing .dashboard-field-grid { grid-template-columns: 1fr; }
-  .marketplace-workspace .seller-inbox, .marketplace-workspace .seller-section { margin: 24px 16px; }
+  .marketplace-workspace .seller-inbox { margin: 24px 16px; }
 }
 
 /* Sponsorships */

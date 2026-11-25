@@ -16,10 +16,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { data } = supabase
     ? await supabase.from("marketplace").select("id,listed_at").order("listed_at", { ascending: false }).limit(5000)
     : { data: null };
-  return [...pages, ...(data ?? []).map((listing: { id: string; listed_at: string | null }) => ({
+  return [...pages, ...(data ?? []).flatMap(listing => listing.id ? [{
     url: `${origin}/acquire/${listing.id}`,
     lastModified: listing.listed_at ?? undefined,
     changeFrequency: "weekly" as const,
     priority: 0.7,
-  }))];
+  }] : [])];
 }

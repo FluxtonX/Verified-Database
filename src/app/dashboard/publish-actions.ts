@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@supabase/supabase-js";
+import { adminSupabase } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { createSupabase } from "@/lib/supabase/server";
 import { importRevenueCatSource, importStripeSource } from "@/lib/provider-import";
@@ -9,6 +9,7 @@ import { isUuid, moneyCents, type ActionResult } from "@/lib/buyer-dashboard";
 import { listingSnapshot, type Provider } from "@/lib/startup-metrics";
 import { importedLogoUrl, startupLogoBucket, startupLogoPath } from "@/lib/startup-logo";
 import { logError } from "@/lib/log";
+import { sqlNullable } from "@/lib/supabase/args";
 
 export async function publishListing(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
   const supabase = await createSupabase();
@@ -25,8 +26,8 @@ export async function publishListing(id: string, _: ActionResult, form: FormData
   ]);
   if (source.error || draft.error || !source.data || !draft.data) return { error: "Couldn’t load your startup and provider." };
   if (!draft.data.website_url || !draft.data.description.trim()) return { error: "Save a website and description in startup details first." };
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL, secret = process.env.SUPABASE_SECRET_KEY;
-  if (!url || !secret) return { error: "Publishing is unavailable until server verification is configured." };
+  const admin = adminSupabase();
+  if (!admin) return { error: "Publishing is unavailable until server verification is configured." };
   const key = String(form.get("api-key") ?? "").trim();
   if (!await importAllowed(supabase)) return { error: "You’ve verified providers several times in the last hour. Try again later." };
   const verifiedAt = Date.now();
@@ -35,7 +36,6 @@ export async function publishListing(id: string, _: ActionResult, form: FormData
   if (result.source.id !== source.data.external_id) return { error: "This key belongs to a different provider account. Use the key for the selected source." };
   const snapshot = listingSnapshot(result.source.metrics, verifiedAt);
   if (!snapshot) return { error: "This provider needs complete, supported USD revenue metrics before it can be published." };
-  const admin = createClient(url, secret, { auth: { persistSession: false, autoRefreshToken: false } });
   let logo = draft.data.anonymous ? null : importedLogoUrl(draft.data.imported_logo_url);
   const picture = await supabase.storage.from(startupLogoBucket).download(startupLogoPath(owner, id));
   if (picture.data && !draft.data.anonymous) {
@@ -45,7 +45,7 @@ export async function publishListing(id: string, _: ActionResult, form: FormData
     logo = admin.storage.from("listing-logos").getPublicUrl(path).data.publicUrl;
   }
   const { error } = await admin.rpc("publish_startup_listing", { p_owner: owner, p_submission: id, p_source: sourceId, p_price: price,
-    p_revenue: snapshot.revenueCents, p_mrr: snapshot.mrrCents, p_logo: logo });
+    p_revenue: snapshot.revenueCents, p_mrr: sqlNullable(snapshot.mrrCents), p_logo: sqlNullable(logo) });
   if (error) logError("publish.rpc", error, { submission: id, provider: source.data.provider });
   if (error) return { error: error.code === "P0004" ? "This startup has already been sold." : "Couldn’t publish this listing. Check that the marketplace migration is applied." };
   revalidatePath("/dashboard"); revalidatePath("/acquire", "layout"); revalidatePath("/");

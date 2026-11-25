@@ -142,13 +142,3 @@ export async function setSellerLeadArchived(leadId: string, archived: boolean): 
   revalidatePath("/dashboard");
   return { message: archived ? "Conversation archived." : "Conversation restored." };
 }
-
-export async function requestSaleListing(id: string): Promise<State> {
-  const user = await account();
-  if (!user || !isId(id)) return { error: "Startup unavailable." };
-  const { data, error } = await user.supabase.from("startup_submissions").update({ wants_sale: true })
-    .eq("id", id).eq("owner_id", user.id).select("id").maybeSingle();
-  if (error || !data) return { error: "Couldn’t save your listing request." };
-  revalidatePath("/dashboard");
-  return { message: "Listing request saved." };
-}

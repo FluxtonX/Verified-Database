@@ -89,3 +89,15 @@ Verified by: `tsc`, `eslint`, unit tests, production build, and both SQL suites 
 | F-19 | Fixed | GitHub Actions CI with app checks and a Postgres job running all migrations and three SQL suites. |
 
 Live database (2026-11-25): migrations through `20261125000100` applied; `20261117000000` recorded as previously hand-applied; `20261117000001_sponsor_logos` (never applied before) applied.
+
+## Status update — scalability, buyer context, realtime, cleanup, SEO (2026-11-25)
+
+| ID | Status | What changed |
+|---|---|---|
+| F-15 | Fixed | Marketplace filters/sort/pagination in the database via URL parameters; buyer dashboard loads only saved listings and three suggestions. |
+| F-28 | Fixed; needs migration | `seller_lead_buyers` view + "About the buyer" card in the seller inbox. |
+| F-30 | Fixed; needs migration | Inbox updates over Supabase Realtime (RLS-filtered); 60 s fallback. CSP `connect-src` now allows the project's Supabase origin. Trade-off: the page receives a short-lived access token for the socket. |
+| F-24 | Partly fixed | Generated `Database` types on all clients; shared admin client; `sqlNullable` for NULL RPC args. A full data-access layer is still optional. |
+| F-23 | Fixed | Dead actions (`saveStartup`, listing-review request), 51 unused CSS selectors and the `.idea/` IDE files removed. |
+| F-26 | Fixed | `server-only` on Supabase server/admin/public clients, catalog, billing, provider import, logging, rate limiting and sample data. |
+| F-20 | Fixed | JSON-LD on home and listings; generated Open Graph images (site and per listing); `summary_large_image` cards. |

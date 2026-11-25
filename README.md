@@ -97,3 +97,18 @@ Apply `20261125000200_rate_limits.sql` and `20261125000300_startup_deletion.sql`
 - **Startup management:** founders can disconnect a provider and delete a startup (blocked while its listing is live; removes it from the leaderboard and deletes its logo).
 - **Logging:** server failures are written as one JSON line each (`"event": "…"`) to the runtime logs; search Vercel logs by event name.
 - **CI:** `.github/workflows/ci.yml` runs typecheck, lint, unit tests and a build, then applies every migration to a disposable Postgres (with `tests/supabase-stub.sql` standing in for Supabase) and runs the three SQL suites.
+
+## Marketplace queries, buyer context, live inbox (2026-11-25)
+
+Apply `20261125000400_seller_buyer_context.sql` and `20261125000500_inbox_realtime.sql`, then regenerate types:
+
+```sh
+supabase gen types typescript --linked --schema public > src/lib/database.types.ts
+```
+
+(prepend the two comment lines at the top of that file). Database types live in `src/lib/database.types.ts`; every Supabase client is typed with them. RPC arguments that SQL accepts as NULL go through `sqlNullable()`.
+
+- **Marketplace:** filters, sort and page live in the URL (`/acquire?price_max=60000&sort=price-desc&page=2`) and run as one database query (24 per page). The header totals read two numeric columns only. Buyer recommendations and saved listings query just what they show.
+- **Buyer context:** the seller inbox shows the buyer's own buyer profile (introduction, budget, interests) for that conversation, via the `seller_lead_buyers` view.
+- **Live inbox:** new messages arrive over Supabase Realtime (RLS decides who receives what). The browser gets a short-lived access token from a server action, because session cookies are httpOnly. If the live link drops, the inbox refreshes every minute.
+- **Search and sharing:** JSON-LD (`WebSite` on home, `Product`/`Offer` on listings) and generated Open Graph images for the site and each listing.

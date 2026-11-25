@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createSupabase } from "@/lib/supabase/server";
 import { buyerUrl, isUuid, listingReturn, moneyCents, type ActionResult, type InquiryStatus } from "@/lib/buyer-dashboard";
 import { logError } from "@/lib/log";
+import { sqlNullable } from "@/lib/supabase/args";
 
 async function account() {
   const supabase = await createSupabase();
@@ -70,7 +71,7 @@ export async function contactListing(id: string, inquiry: boolean, _: ActionResu
   if (!body || body.length > 2000) return { error: "Enter a message up to 2,000 characters." };
   const offerCents = offer ? moneyCents(offer) : null;
   if (offer && offerCents === null) return { error: "Enter a positive offer in USD, with up to two decimal places." };
-  const { data, error } = await user.supabase.rpc("contact_listing", { p_listing_id: id, p_body: body, p_inquiry: inquiry, p_offer_cents: offerCents });
+  const { data, error } = await user.supabase.rpc("contact_listing", { p_listing_id: id, p_body: body, p_inquiry: inquiry, p_offer_cents: sqlNullable(offerCents) });
   if (error) logError("buyer.contact", error, { listing: id, inquiry });
   if (error || typeof data !== "string") return { error: activityError(error?.code) };
   refresh();

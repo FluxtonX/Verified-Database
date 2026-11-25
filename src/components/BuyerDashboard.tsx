@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createSupabase } from "@/lib/supabase/server";
-import { compactDollars, dollars, readMarketplace } from "@/lib/catalog";
+import { compactDollars, dollars, marketplaceCard, readListings, type MarketplaceRow } from "@/lib/catalog";
 import { buyerUrl, inquiryLabels, isUuid, listingReturn, type BuyerConversation, type BuyerProfile, type BuyerTab } from "@/lib/buyer-dashboard";
 import type { SellerMessage } from "@/lib/seller-dashboard";
 import { AcquisitionAction, BuyerFeedback, BuyerPreferences, BuyerProfileForm, BuyerReply, SaveListingButton } from "./BuyerForms";
@@ -36,30 +36,36 @@ export default async function BuyerDashboard({ supabase, owner, tab, threadId, v
   }
   if (tab === "chat") return <BuyerInbox supabase={supabase} threadId={threadId} />;
 
-  const [savedResult, conversationsResult, marketplace, owned] = await Promise.all([
+  const [savedResult, conversationsResult, owned] = await Promise.all([
     supabase.from("saved_listings").select("listing_id,created_at").eq("buyer_id", owner).order("created_at", { ascending: false }),
     supabase.from("buyer_conversations").select("*").order("created_at", { ascending: false }).returns<BuyerConversation[]>(),
-    readMarketplace(supabase),
     supabase.from("seller_publications").select("listing_id"),
   ]);
-  if (savedResult.error || conversationsResult.error || owned.error || !marketplace) return <section className="workspace-page"><p className="seller-card" role="alert">Couldn’t load your acquisition activity. Refresh to try again.</p></section>;
+  // Load only what this page shows: the saved listings and three matching recommendations.
+  const excluded = [...new Set([...(savedResult.data ?? []).map(save => save.listing_id), ...(owned.data ?? []).flatMap(item => item.listing_id ?? [])])];
+  let suggestions = supabase.from("marketplace").select("*");
+  if (excluded.length) suggestions = suggestions.not("id", "in", `(${excluded.join(",")})`);
+  if (profile?.budget_min != null) suggestions = suggestions.gte("asking_price_cents", profile.budget_min * 100);
+  if (profile?.budget_max != null) suggestions = suggestions.lte("asking_price_cents", profile.budget_max * 100);
+  if (profile?.categories.length) suggestions = suggestions.in("category", profile.categories);
+  const [savedListings, suggested] = await Promise.all([
+    readListings(supabase, (savedResult.data ?? []).map(save => save.listing_id)),
+    suggestions.order("featured", { ascending: false }).order("listed_at", { ascending: false }).limit(3).returns<MarketplaceRow[]>(),
+  ]);
+  if (savedResult.error || conversationsResult.error || owned.error || !savedListings || suggested.error) return <section className="workspace-page"><p className="seller-card" role="alert">Couldn’t load your acquisition activity. Refresh to try again.</p></section>;
   const saves = savedResult.data;
-  const savedIds = new Set(saves.map(save => save.listing_id));
   const conversations = conversationsResult.data ?? [];
   const talking = conversations.filter(item => item.last_message_at);
   const inquiries = conversations.filter(item => item.inquiry_status !== "none");
   const awaiting = talking.filter(item => item.last_sender === "seller");
-  const ownIds = new Set(owned.data?.map(item => item.listing_id));
-  const recommendations = marketplace.filter(item => !ownIds.has(item.id) && !savedIds.has(item.id) &&
-    (profile?.budget_min == null || item.price >= profile.budget_min) && (profile?.budget_max == null || item.price <= profile.budget_max) &&
-    (!profile?.categories.length || profile.categories.includes(item.category))).slice(0, 3);
+  const recommendations = (suggested.data ?? []).map(marketplaceCard);
 
   if (tab === "acquire") {
     const current = view === "talking" ? "talking" : view === "deals" ? "deals" : "saved";
     return <section className="workspace-page"><WorkspaceHeading eyebrow="YOUR PIPELINE" title="Acquisitions" description="From a first save to your next startup."><Link className="startup-submit" href="/acquire">Explore marketplace <Icon name="external" size={15} /></Link></WorkspaceHeading>
       <nav className="workspace-tabs" aria-label="Acquisition stage">{[["saved", "Saved", saves.length], ["talking", "Conversations", talking.length], ["deals", "Inquiries", inquiries.length]].map(([key, name, count]) => <Link key={key} href={buyerUrl("acquire", { view: String(key) })} aria-current={current === key ? "page" : undefined}>{name}<span>{count}</span></Link>)}</nav>
       {current === "saved" ? saves.length ? <div className="workspace-listing-grid">{saves.map(save => {
-        const listing = marketplace.find(item => item.id === save.listing_id);
+        const listing = savedListings.find(item => item.id === save.listing_id);
         return listing ? <MarketplaceListingCard key={listing.id} startup={listing} signedIn ready={Boolean(profile)} saved /> : <article key={save.listing_id} className="seller-card unavailable-listing"><Icon name="building" size={24} /><h2>Listing no longer available</h2><p className="muted">This startup may have sold or been withdrawn.</p><SaveListingButton id={save.listing_id} saved /></article>;
       })}</div> : <EmptyWorkspace icon="heart" title="Build your shortlist" description="Save the startups that fit your next chapter." href="/acquire" action="Find your first opportunity" />
         : <ConversationTable conversations={current === "talking" ? talking : inquiries} inquiry={current === "deals"} />}
