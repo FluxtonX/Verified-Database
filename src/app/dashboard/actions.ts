@@ -8,6 +8,7 @@ import { importRevenueCatSource, importStripeSource } from "@/lib/provider-impor
 import { startupHandle, startupTeamSizes, startupWebsite, storeLink } from "@/lib/startup-details";
 import { isLogoImage, startupLogoBucket, startupLogoPath } from "@/lib/startup-logo";
 import { logError } from "@/lib/log";
+import { sqlNullable } from "@/lib/supabase/args";
 
 type ActionState = { error?: string; saved?: boolean };
 const importLimited = "You’ve connected providers several times in the last hour. Try again later.";
@@ -61,20 +62,20 @@ export async function importStartupSource(target: string | null, _: ActionState,
 
   const source = result.source;
   const snapshot = {
-    p_startup_id: target, p_external_id: source.id, p_name: source.name,
-    p_website: source.website, p_description: source.description,
-    p_handle: handle || null, p_metrics: source.metrics, p_synced_at: started,
+    p_startup_id: sqlNullable(target), p_external_id: source.id, p_name: source.name,
+    p_website: sqlNullable(source.website), p_description: source.description,
+    p_handle: sqlNullable(handle || null), p_metrics: source.metrics, p_synced_at: started,
   };
   const { data, error } = source.appProfile
     ? await supabase.rpc("save_revenuecat_app_profile", {
       ...snapshot,
-      p_app_store_url: source.appProfile.app_store_url,
-      p_google_play_url: source.appProfile.google_play_url,
-      p_logo_url: source.appProfile.logo_url,
+      p_app_store_url: sqlNullable(source.appProfile.app_store_url),
+      p_google_play_url: sqlNullable(source.appProfile.google_play_url),
+      p_logo_url: sqlNullable(source.appProfile.logo_url),
       p_mobile_app: source.appProfile.mobile_app,
     })
     : await supabase.rpc("save_startup_payment_source", {
-      ...snapshot, p_provider: provider, p_country: source.country,
+      ...snapshot, p_provider: provider, p_country: sqlNullable(source.country),
     });
 
   if (error) logError("startup.import_save", error, { provider, target });

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   icons: { icon: "/icon.svg" },
   description,
   openGraph: { type: "website", siteName: "VerifedDB", title: "VerifedDB - Buy and Sell SaaS Startups", description },
-  twitter: { card: "summary", title: "VerifedDB - Buy and Sell SaaS Startups", description },
+  twitter: { card: "summary_large_image", title: "VerifedDB - Buy and Sell SaaS Startups", description },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

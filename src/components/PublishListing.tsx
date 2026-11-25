@@ -5,10 +5,9 @@ import { publishListing, withdrawListing } from "@/app/dashboard/publish-actions
 import { providerNames, type PaymentSource } from "@/lib/startup-metrics";
 import type { ActionResult } from "@/lib/buyer-dashboard";
 import { ActionNotice } from "./BuyerForms";
-import { SaleRequest } from "./SellerDashboardForms";
 
 export type Publication = { submission_id: string; listing_id: string; asking_price_cents: number; status: string };
-export default function PublishListing({ id, sources, publication, requested }: { id: string; sources: PaymentSource[]; publication?: Publication; requested: boolean }) {
+export default function PublishListing({ id, sources, publication }: { id: string; sources: PaymentSource[]; publication?: Publication }) {
   const [state, action, pending] = useActionState(async (previous: ActionResult, form: FormData) => {
     const result = await publishListing(id, previous, form);
     if (key.current) key.current.value = "";
@@ -33,6 +32,6 @@ export default function PublishListing({ id, sources, publication, requested }: 
       <label>Provider secret key<input ref={key} name="api-key" type="password" required autoComplete="off" placeholder="Key for the selected source" maxLength={256} /></label>
       <small>Only the selected source’s revenue is published. Save your startup details before publishing.</small>
       <ActionNotice state={state} /><div className="seller-form-actions"><button className="startup-submit" disabled={pending || !sources.length}>{pending ? "Verifying & publishing…" : "Verify & publish"}</button></div>
-    </form>{!publication && <div className="publication-help"><p className="muted">Or save a request for listing review.</p><SaleRequest id={id} requested={requested} /></div>}</details>}
+    </form></details>}
   </section>;
 }

@@ -8,7 +8,16 @@ import InboxRefresh from "./InboxRefresh";
 import { WorkspaceHeading } from "./BuyerDashboard";
 import { SellerArchive, SellerReply } from "./SellerDashboardForms";
 
-export function SellerInbox({ leads, thread, messages, archived, needsReply, timezone, failed }: {
+const wholeDollars = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+function budget(buyer: LeadBuyer) {
+  if (buyer.budget_min == null && buyer.budget_max == null) return "Not shared";
+  const min = buyer.budget_min == null ? "Any" : wholeDollars.format(buyer.budget_min);
+  return buyer.budget_max == null ? `${min}+` : `${min} – ${wholeDollars.format(buyer.budget_max)}`;
+}
+
+export type LeadBuyer = { display_name: string | null; bio: string | null; budget_min: number | null; budget_max: number | null; categories: string[] | null };
+
+export function SellerInbox({ leads, thread, messages, archived, needsReply, timezone, failed, buyer }: {
   leads: SellerLead[];
   thread?: SellerLead;
   messages: SellerMessage[];
@@ -16,6 +25,7 @@ export function SellerInbox({ leads, thread, messages, archived, needsReply, tim
   needsReply: boolean;
   timezone: string;
   failed: boolean;
+  buyer?: LeadBuyer;
 }) {
   const view = { ...(archived && { folder: "archive" }), ...(needsReply && { filter: "reply" }) };
   let date: Intl.DateTimeFormat;
@@ -94,6 +104,14 @@ export function SellerInbox({ leads, thread, messages, archived, needsReply, tim
           {thread.offer_cents && <div><dt>Offer</dt><dd className="mono">{dollars.format(thread.offer_cents / 100)}</dd></div>}
           <div><dt>Interest recorded</dt><dd>{date.format(new Date(thread.created_at))}</dd></div></dl>
           : <p className="muted">Details about the buyer’s interest and any offer appear here.</p>}
+        {thread && buyer && <section className="inbox-buyer" aria-label="About the buyer">
+          <h3 className="workspace-eyebrow">About the buyer</h3>
+          {buyer.bio ? <p>{buyer.bio}</p> : <p className="muted">{buyer.display_name ?? "This buyer"} hasn’t written an introduction yet.</p>}
+          <dl>
+            <div><dt>Budget</dt><dd className="mono">{budget(buyer)}</dd></div>
+            {buyer.categories && buyer.categories.length > 0 && <div><dt>Interested in</dt><dd className="workspace-tags">{buyer.categories.map(category => <span key={category}>{category}</span>)}</dd></div>}
+          </dl>
+        </section>}
         <p className="inbox-note"><Icon name="shield" size={14} />Run diligence, contracts and escrow with your own advisors. VerifedDB doesn’t hold funds.</p>
       </aside>
     </div>

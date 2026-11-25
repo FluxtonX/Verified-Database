@@ -21,7 +21,7 @@ import { importedLogoUrl, startupLogoBucket, startupLogoPath } from "@/lib/start
 
 export const metadata: Metadata = { title: "Dashboard | VerifedDB", robots: { index: false, follow: false } };
 
-type Draft = StartupDetails & { startup_payment_sources: PaymentSource[]; wants_sale: boolean };
+type Draft = StartupDetails & { startup_payment_sources: PaymentSource[] };
 
 type Supabase = NonNullable<Awaited<ReturnType<typeof createSupabase>>>;
 type DashboardParams = { startup?: string; mode?: string; tab?: string; thread?: string; folder?: string; filter?: string; view?: string; returnTo?: string };
@@ -68,12 +68,14 @@ async function SellerContent({ supabase, owner, tab, params, email }: {
         const selected = await supabase.from("seller_leads").select("id,buyer_name,startup_name,created_at,last_message_at,last_sender,archived,inquiry_at,offer_cents,inquiry_status").eq("seller_id", owner).eq("id", threadId).maybeSingle<SellerLead>();
         thread = selected.data ?? undefined;
       }
-      const [conversation, settings] = await Promise.all([
+      const [conversation, settings, buyer] = await Promise.all([
         thread ? supabase.from("seller_lead_messages").select("id,sender,body,created_at").eq("lead_id", thread.id)
           .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(100).returns<SellerMessage[]>() : null,
         thread ? supabase.from("profiles").select("timezone").eq("id", owner).maybeSingle<{ timezone: string }>() : null,
+        // Absent until migration 20261125000400 is applied; the inbox then simply omits the buyer card.
+        thread ? supabase.from("seller_lead_buyers").select("display_name,bio,budget_min,budget_max,categories").eq("lead_id", thread.id).maybeSingle() : null,
       ]);
-      return <SellerInbox leads={leads} thread={thread} messages={conversation?.data?.reverse() ?? []}
+      return <SellerInbox leads={leads} thread={thread} messages={conversation?.data?.reverse() ?? []} buyer={buyer?.data ?? undefined}
         timezone={settings?.data?.timezone ?? "UTC"} archived={archived} needsReply={needsReply} failed={Boolean(error || conversation?.error)} />;
     }
     case "my-profile":
@@ -109,7 +111,7 @@ async function SellerContent({ supabase, owner, tab, params, email }: {
 
 async function SellerStartups({ supabase, owner, selected }: { supabase: Supabase; owner: string; selected?: string }) {
   const { data, error } = await supabase.from("startup_submissions")
-    .select(`${startupDetailsColumns},wants_sale,startup_payment_sources(id,provider,name,synced_at)`)
+    .select(`${startupDetailsColumns},startup_payment_sources(id,provider,name,synced_at)`)
     .eq("owner_id", owner).order("created_at", { ascending: false }).returns<Draft[]>();
   const drafts = data ?? [];
   const [publications, categories] = await Promise.all([
@@ -155,7 +157,7 @@ async function SellerStartups({ supabase, owner, selected }: { supabase: Supabas
                   <div><strong>Showcase your startup</strong><p>Preview your startup page and its revenue metrics.</p></div>
                   <Link href={`/startup/${startup.id}`}>View page →</Link>
                 </div>
-                {publications.error ? <p className="dashboard-empty" role="alert">Couldn’t load listing status. Apply the marketplace migration, then refresh.</p> : <PublishListing id={startup.id} requested={startup.wants_sale} sources={startup.startup_payment_sources} publication={publications.data?.find(item => item.submission_id === startup.id)} key={`publish:${startup.id}`} />}
+                {publications.error ? <p className="dashboard-empty" role="alert">Couldn’t load listing status. Apply the marketplace migration, then refresh.</p> : <PublishListing id={startup.id} sources={startup.startup_payment_sources} publication={publications.data?.find(item => item.submission_id === startup.id)} key={`publish:${startup.id}`} />}
                 <div className="dashboard-status dashboard-sources">
                   <div>
                     <strong>Payment providers</strong>

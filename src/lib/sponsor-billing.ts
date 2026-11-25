@@ -1,17 +1,12 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { unstable_cache } from "next/cache";
-import { createClient } from "@supabase/supabase-js";
+import "server-only";
+import { adminSupabase } from "@/lib/supabase/admin";
 import { createSupabase } from "@/lib/supabase/server";
 import { publicSupabase } from "@/lib/supabase/public";
 import { publishedSponsorCards, type SponsorCatalog, type SponsorPrice, type Sponsorship } from "@/lib/sponsorship";
 
-export function sponsorAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SECRET_KEY;
-  return url && key ? createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  }) : null;
-}
+export const sponsorAdmin = adminSupabase;
 
 export function sponsorCheckoutEnabled() {
   return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SPONSOR_PRICE_ID &&

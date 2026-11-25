@@ -2,7 +2,7 @@
 
 import { useActionState, useRef, useState, useTransition } from "react";
 import {
-  changeSellerEmail, requestAccountDeletion, requestSaleListing, savePublicProfile, saveSellerPreferences,
+  changeSellerEmail, requestAccountDeletion, savePublicProfile, saveSellerPreferences,
   saveSocialLink, sendSellerFeedback, sendSellerMessage, setSellerLeadArchived, uploadProfilePicture,
 } from "@/app/dashboard/seller-actions";
 import { resizeImage } from "@/lib/resize-image";
@@ -188,14 +188,4 @@ export function SellerReply({ id }: { id: string }) {
 export function SellerArchive({ id, archived }: { id: string; archived: boolean }) {
   const [state, action, pending] = useActionState(setSellerLeadArchived.bind(null, id, !archived), {});
   return <form action={action}><button className="seller-button" disabled={pending}>{archived ? "Restore" : "Archive"}</button><Result state={state} /></form>;
-}
-
-export function SaleRequest({ id, requested }: { id: string; requested: boolean }) {
-  const [state, action, pending] = useActionState(requestSaleListing.bind(null, id), {});
-  return <form action={action} className="seller-listing-action">
-    <button className="seller-button" disabled={pending || requested || Boolean(state.message)}>
-      {requested || state.message ? "Request saved" : pending ? "Saving…" : "Request listing review"}
-    </button>
-    {state.error && <Result state={state} />}
-  </form>;
 }

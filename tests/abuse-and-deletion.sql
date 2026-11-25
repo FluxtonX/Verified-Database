@@ -96,6 +96,19 @@ select pg_temp.assert((select count(*) = 0 from public.startup_payment_sources w
 select pg_temp.assert((select count(*) = 0 from public.leaderboard where name = 'Deletable'), 'deleted startup leaves the leaderboard');
 select pg_temp.assert((select count(*) = 1 from public.seller_leads where listing_id = :'listing_id'), 'buyer thread history is kept');
 
+-- F-28: the seller sees the buyer profile for their own leads; nobody else does.
+update public.buyer_profiles set bio = 'Operator looking for SaaS', budget_min = 10000, budget_max = 50000 where id = '12000000-0000-4000-8000-000000000002';
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '12000000-0000-4000-8000-000000000001', true);
+select pg_temp.assert((select count(*) = 1 and bool_and(bio = 'Operator looking for SaaS' and budget_max = 50000) from public.seller_lead_buyers), 'seller sees the buyer profile of their lead');
+select set_config('request.jwt.claim.sub', '12000000-0000-4000-8000-000000000002', true);
+select pg_temp.assert((select count(*) = 0 from public.seller_lead_buyers), 'buyers do not see the seller-side view');
+reset role;
+set local role anon;
+do $$ begin perform 1 from public.seller_lead_buyers; raise exception 'FAIL: anon can read buyer context';
+exception when insufficient_privilege then null; end $$;
+reset role;
+
 -- Storage: founders may delete only files in their own folder.
 insert into storage.buckets (id) values ('startup-draft-logos') on conflict do nothing;
 insert into storage.objects (bucket_id, name) values

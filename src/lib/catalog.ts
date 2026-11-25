@@ -1,14 +1,16 @@
+import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { unstable_cache } from "next/cache";
 import { createSupabase } from "./supabase/server";
 import { publicSupabase } from "./supabase/public";
+import { pageSize, searchTerm, type MarketplaceFilters } from "./marketplace-filters";
 
 export const dollars = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 export const compactDollars = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 });
 const shortDate = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 const compactCount = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
 
-type MarketplaceRow = {
+export type MarketplaceRow = {
   id: string;
   name: string;
   category: string;
@@ -87,19 +89,60 @@ export async function catalogContext() {
   return { supabase, signedIn: Boolean(session.data?.claims.sub), categories, failed };
 }
 
-export async function readMarketplace(supabase: SupabaseClient) {
-  const rows: MarketplaceCardData[] = [];
-  const batchSize = 250;
-  // PostgREST caps each response. Read each page before applying the existing
-  // in-browser filters so the count and sort cover the visible catalog.
-  for (let offset = 0; ; offset += batchSize) {
-    const result = await supabase.from("marketplace").select("*")
-      .order("featured", { ascending: false }).order("multiple", { nullsFirst: false })
-      .order("id").range(offset, offset + batchSize - 1).returns<MarketplaceRow[]>();
-    if (result.error) return null;
-    rows.push(...result.data.map(marketplaceCard));
-    if (result.data.length < batchSize) return rows;
-  }
+/** One page of the marketplace, filtered and sorted in the database. */
+export async function queryMarketplace(supabase: SupabaseClient, f: MarketplaceFilters) {
+  const cents = (value: string) => Math.round(Number(value) * 100);
+  let query = supabase.from("marketplace").select("*", { count: "exact" });
+  const term = searchTerm(f.q);
+  if (term) query = query.or(`name.ilike."*${term}*",description.ilike."*${term}*",category.ilike."*${term}*"`);
+  if (f.category) query = query.eq("category", f.category);
+  if (f.revenueMin) query = query.gte("revenue_30d_cents", cents(f.revenueMin));
+  if (f.revenueMax) query = query.lte("revenue_30d_cents", cents(f.revenueMax));
+  if (f.mrrMin) query = query.gte("mrr_cents", cents(f.mrrMin));
+  if (f.mrrMax) query = query.lte("mrr_cents", cents(f.mrrMax));
+  if (f.growthMin) query = query.gte("revenue_growth_pct", Number(f.growthMin));
+  if (f.growthMax) query = query.lte("revenue_growth_pct", Number(f.growthMax));
+  if (f.priceMin) query = query.gte("asking_price_cents", cents(f.priceMin));
+  if (f.priceMax) query = query.lte("asking_price_cents", cents(f.priceMax));
+  if (f.marginMin) query = query.gte("profit_margin_pct", Number(f.marginMin));
+  if (f.marginMax) query = query.lte("profit_margin_pct", Number(f.marginMax));
+  if (f.maxMultiple) query = query.lte("multiple", Number(f.maxMultiple));
+  if (f.audience) query = query.in("audience", [f.audience, "Both"]);
+  if (f.mobile) query = query.eq("mobile_app", f.mobile === "yes");
+  if (f.listed) query = query.gte("listed_at", new Date(Date.now() - Number(f.listed) * 86_400_000).toISOString());
+  if (f.foundedFrom) query = query.gte("founded_on", f.foundedFrom);
+  if (f.foundedTo) query = query.lte("founded_on", f.foundedTo);
+  if (f.country) query = query.eq("country", f.country);
+  const [field, direction] = f.sort.split("-");
+  const column = ({ price: "asking_price_cents", multiple: "multiple", revenue: "revenue_30d_cents", growth: "revenue_growth_pct",
+    listed: "listed_at", founded: "founded_on" } as Record<string, string>)[field];
+  query = column
+    ? query.order(column, { ascending: direction === "asc", nullsFirst: false })
+    : query.order("featured", { ascending: false }).order("multiple", { ascending: true, nullsFirst: false });
+  const from = (f.page - 1) * pageSize;
+  const { data, count, error } = await query.order("id").range(from, from + pageSize - 1).returns<MarketplaceRow[]>();
+  // Asking for a page past the end returns an error from PostgREST; treat it as an empty page.
+  if (error && error.code !== "PGRST103") return null;
+  return { rows: (data ?? []).map(marketplaceCard), total: count ?? 0 };
+}
+
+/** Totals for the marketplace header, from two small numeric columns rather than whole rows. */
+export async function marketplaceStats(supabase: SupabaseClient) {
+  const { data, error } = await supabase.from("marketplace").select("revenue_30d_cents,multiple").limit(10_000)
+    .returns<{ revenue_30d_cents: number; multiple: number | null }[]>();
+  if (error) return null;
+  return {
+    listings: data.length,
+    revenue: data.reduce((sum, row) => sum + row.revenue_30d_cents, 0) / 100,
+    multiples: data.flatMap(row => row.multiple ?? []),
+  };
+}
+
+/** Specific listings by ID (saved startups). */
+export async function readListings(supabase: SupabaseClient, ids: string[]) {
+  if (!ids.length) return [];
+  const { data, error } = await supabase.from("marketplace").select("*").in("id", ids).returns<MarketplaceRow[]>();
+  return error ? null : data.map(marketplaceCard);
 }
 
 type LeaderboardRow = {
