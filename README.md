@@ -88,3 +88,12 @@ Also apply `supabase/migrations/20261125000100_withdrawal_notice.sql`: when a se
 `next.config.ts` sets a Content-Security-Policy (no framing, restricted form targets), `X-Frame-Options`, `nosniff`, `Referrer-Policy` and `Permissions-Policy`, and disables `X-Powered-By`. If you add a third-party script, font or form destination, extend the policy there.
 
 The Stripe sponsor price (1 hour), categories (1 day) and sponsor catalog (5 minutes) are cached on the server. Publishing a sponsor card, reserving a slot, and Stripe subscription webhooks refresh the sponsor catalog immediately.
+
+## Abuse limits, startup deletion and CI (2026-11-25)
+
+Apply `20261125000200_rate_limits.sql` and `20261125000300_startup_deletion.sql` (`supabase db push --linked`).
+
+- **Rate limits** (per user, enforced in SQL, refused attempts don't count): 60 messages/hour, 20 new seller contacts/day, 200 saves/day, 20 provider imports or verifications/hour. Change them in `public.consume_rate_limit`.
+- **Startup management:** founders can disconnect a provider and delete a startup (blocked while its listing is live; removes it from the leaderboard and deletes its logo).
+- **Logging:** server failures are written as one JSON line each (`"event": "…"`) to the runtime logs; search Vercel logs by event name.
+- **CI:** `.github/workflows/ci.yml` runs typecheck, lint, unit tests and a build, then applies every migration to a disposable Postgres (with `tests/supabase-stub.sql` standing in for Supabase) and runs the three SQL suites.

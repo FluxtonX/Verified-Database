@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabase } from "@/lib/supabase/server";
 import { buyerUrl, isUuid, listingReturn, moneyCents, type ActionResult, type InquiryStatus } from "@/lib/buyer-dashboard";
+import { logError } from "@/lib/log";
 
 async function account() {
   const supabase = await createSupabase();
@@ -12,6 +13,7 @@ async function account() {
 }
 function refresh() { revalidatePath("/dashboard"); revalidatePath("/acquire", "layout"); }
 function activityError(code?: string) {
+  if (code === "P0005") return "You’re doing that very quickly. Wait a few minutes and try again.";
   if (code === "P0003") return "Set up your buyer profile before saving or contacting sellers.";
   if (code === "P0002") return "This listing is unavailable, or belongs to your seller profile.";
   if (code === "P0004") return "You already have an inquiry for this startup. Continue in your inbox.";
@@ -21,7 +23,7 @@ export async function setSavedListing(id: string, saved: boolean): Promise<Actio
   const user = await account();
   if (!user || !isUuid(id)) return { error: "Sign in to save a startup." };
   const { error } = await user.supabase.rpc("set_saved_listing", { p_listing_id: id, p_saved: saved });
-  if (error) return { error: activityError(error.code) };
+  if (error) { logError("buyer.save_listing", error, { listing: id, saved }); return { error: activityError(error.code) }; }
   refresh();
   return { message: saved ? "Startup saved." : "Startup removed." };
 }
@@ -44,7 +46,7 @@ export async function saveBuyerProfile(_: ActionResult, form: FormData): Promise
     if (valid.error || valid.data.length !== categories.length) return { error: "Choose valid startup categories." };
   }
   const { error } = await user.supabase.from("buyer_profiles").upsert({ id: user.id, display_name: name, bio, budget_min: min, budget_max: max, categories }, { defaultToNull: false });
-  if (error) return { error: "Couldn’t save your buyer profile. Try again." };
+  if (error) { logError("buyer.profile_save", error); return { error: "Couldn’t save your buyer profile. Try again." }; }
   refresh();
   const destination = listingReturn(form.get("returnTo"));
   if (destination) redirect(destination + "#contact");
@@ -69,6 +71,7 @@ export async function contactListing(id: string, inquiry: boolean, _: ActionResu
   const offerCents = offer ? moneyCents(offer) : null;
   if (offer && offerCents === null) return { error: "Enter a positive offer in USD, with up to two decimal places." };
   const { data, error } = await user.supabase.rpc("contact_listing", { p_listing_id: id, p_body: body, p_inquiry: inquiry, p_offer_cents: offerCents });
+  if (error) logError("buyer.contact", error, { listing: id, inquiry });
   if (error || typeof data !== "string") return { error: activityError(error?.code) };
   refresh();
   redirect(buyerUrl("chat", { thread: data }));
@@ -79,7 +82,7 @@ export async function sendBuyerMessage(id: string, _: ActionResult, form: FormDa
   const body = String(form.get("message") ?? "").trim();
   if (!body || body.length > 2000) return { error: "Enter a message up to 2,000 characters." };
   const { error } = await user.supabase.rpc("send_buyer_message", { p_lead_id: id, p_body: body });
-  if (error) return { error: "Couldn’t send your message. Try again." };
+  if (error) { logError("buyer.message", error, { lead: id }); return { error: error.code === "P0005" ? activityError("P0005") : "Couldn’t send your message. Try again." }; }
   refresh();
   return { message: "Message sent." };
 }
@@ -87,7 +90,7 @@ export async function updateAcquisition(id: string, status: InquiryStatus): Prom
   const user = await account();
   if (!user || !isUuid(id) || !["accepted", "declined", "withdrawn", "completed"].includes(status)) return { error: "Inquiry unavailable." };
   const { error } = await user.supabase.rpc("update_acquisition", { p_lead_id: id, p_status: status });
-  if (error) return { error: "Couldn’t update this inquiry. Refresh to check its current status." };
+  if (error) { logError("inquiry.update", error, { lead: id, status }); return { error: "Couldn’t update this inquiry. Refresh to check its current status." }; }
   refresh();
   revalidatePath("/");
   return { message: "Inquiry updated." };

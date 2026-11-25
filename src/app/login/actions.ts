@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { appOrigin, loginDestination, oauthDestinationCookie } from "@/lib/supabase/config";
 import { createSupabase } from "@/lib/supabase/server";
+import { logError } from "@/lib/log";
 
 export async function loginWithGoogle(_: { error?: string }, form: FormData): Promise<{ error?: string }> {
   const supabase = await createSupabase();
@@ -14,7 +15,7 @@ export async function loginWithGoogle(_: { error?: string }, form: FormData): Pr
     provider: "google",
     options: { redirectTo: callback.href },
   });
-  if (error || !data.url) return { error: "Google sign-in is unavailable. Please try again." };
+  if (error || !data.url) { logError("auth.google_start", error ?? "no OAuth URL"); return { error: "Google sign-in is unavailable. Please try again." }; }
   (await cookies()).set(oauthDestinationCookie, loginDestination(form.get("next")), {
     path: callback.pathname,
     httpOnly: true,

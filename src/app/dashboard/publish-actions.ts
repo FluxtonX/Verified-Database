@@ -4,9 +4,11 @@ import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { createSupabase } from "@/lib/supabase/server";
 import { importRevenueCatSource, importStripeSource } from "@/lib/provider-import";
+import { importAllowed } from "@/lib/rate-limit";
 import { isUuid, moneyCents, type ActionResult } from "@/lib/buyer-dashboard";
 import { listingSnapshot, type Provider } from "@/lib/startup-metrics";
 import { importedLogoUrl, startupLogoBucket, startupLogoPath } from "@/lib/startup-logo";
+import { logError } from "@/lib/log";
 
 export async function publishListing(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
   const supabase = await createSupabase();
@@ -26,6 +28,7 @@ export async function publishListing(id: string, _: ActionResult, form: FormData
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL, secret = process.env.SUPABASE_SECRET_KEY;
   if (!url || !secret) return { error: "Publishing is unavailable until server verification is configured." };
   const key = String(form.get("api-key") ?? "").trim();
+  if (!await importAllowed(supabase)) return { error: "You’ve verified providers several times in the last hour. Try again later." };
   const verifiedAt = Date.now();
   const result = source.data.provider === "stripe" ? await importStripeSource(key) : await importRevenueCatSource(key, source.data.external_id);
   if (!result.source) return { error: result.error ?? "Couldn’t verify this provider." };
@@ -38,11 +41,12 @@ export async function publishListing(id: string, _: ActionResult, form: FormData
   if (picture.data && !draft.data.anonymous) {
     const path = `${owner}/${id}.png`;
     const upload = await admin.storage.from("listing-logos").upload(path, picture.data, { upsert: true, contentType: "image/png", cacheControl: "0" });
-    if (upload.error) return { error: "Couldn’t publish your logo. Try again." };
+    if (upload.error) { logError("publish.logo_upload", upload.error, { submission: id }); return { error: "Couldn’t publish your logo. Try again." }; }
     logo = admin.storage.from("listing-logos").getPublicUrl(path).data.publicUrl;
   }
   const { error } = await admin.rpc("publish_startup_listing", { p_owner: owner, p_submission: id, p_source: sourceId, p_price: price,
     p_revenue: snapshot.revenueCents, p_mrr: snapshot.mrrCents, p_logo: logo });
+  if (error) logError("publish.rpc", error, { submission: id, provider: source.data.provider });
   if (error) return { error: error.code === "P0004" ? "This startup has already been sold." : "Couldn’t publish this listing. Check that the marketplace migration is applied." };
   revalidatePath("/dashboard"); revalidatePath("/acquire", "layout"); revalidatePath("/");
   return { message: "Listing published. Buyers can now save it and contact you." };
@@ -52,7 +56,7 @@ export async function withdrawListing(id: string): Promise<ActionResult> {
   const session = await supabase?.auth.getClaims();
   if (!supabase || !session?.data?.claims.sub || !isUuid(id)) return { error: "Listing unavailable." };
   const { error } = await supabase.rpc("withdraw_startup_listing", { p_listing: id });
-  if (error) return { error: "Couldn’t withdraw this listing. Refresh to check its status." };
+  if (error) { logError("listing.withdraw", error, { listing: id }); return { error: "Couldn’t withdraw this listing. Refresh to check its status." }; }
   revalidatePath("/dashboard"); revalidatePath("/acquire", "layout"); revalidatePath("/");
   return { message: "Listing withdrawn." };
 }

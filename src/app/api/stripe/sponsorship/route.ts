@@ -3,6 +3,7 @@ import {
   sponsorAdmin, sponsorCatalogTag, stripeRequest, syncSponsorCheckout, syncSponsorSubscription, validStripeSignature,
   type Checkout,
 } from "@/lib/sponsor-billing";
+import { logError } from "@/lib/log";
 
 export const runtime = "nodejs";
 
@@ -42,7 +43,8 @@ export async function POST(request: Request) {
     }
     revalidateTag(sponsorCatalogTag, { expire: 0 }); // cards appear or disappear as subscriptions change
     return new Response(null, { status: 204 });
-  } catch {
+  } catch (error) {
+    logError("stripe.webhook", error);
     return new Response("Could not reconcile sponsorship", { status: 500 });
   }
 }

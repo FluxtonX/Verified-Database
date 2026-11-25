@@ -78,3 +78,14 @@ Verified by: `tsc`, `eslint`, unit tests, production build, and both SQL suites 
 | F-17 | Fixed | Loading skeletons for the marketplace index and dashboard; branded 404, error and global-error pages; missing listings return HTTP 404; signed-out `/dashboard` and `/startup/*` redirect (307) in the proxy before rendering. |
 | F-14 | Fixed | Stripe price (1 h), categories (1 day) and sponsor catalog (5 min, invalidated on changes) cached; home data loads in one parallel round. Local TTFB/total: home ≈0.52 s → 0.17–0.27 s, marketplace ≈0.51 s → 0.16 s, advertise 0.32 s → 0.01 s. |
 | F-20 | Mostly fixed | `robots.txt`, `sitemap.xml` (public listings), per-listing titles/descriptions/canonicals, Open Graph/Twitter tags, `noindex` on dashboard/login/404, accurate `llms.txt`. Structured data and OG images remain. |
+
+## Status update — abuse limits, deletion, logging, CI (2026-11-25)
+
+| ID | Status | What changed |
+|---|---|---|
+| F-07 | Fixed; needs migration | `20261125000200_rate_limits.sql`: per-user limits in SQL for messages, contacts, saves and provider imports/verifications. |
+| F-10 | Fixed; needs migration | `20261125000300_startup_deletion.sql` + dashboard controls: delete startup (blocked while listed), disconnect provider. |
+| F-18 | Fixed | Structured JSON error logging (`src/lib/log.ts`) across actions, webhook, auth and provider imports. |
+| F-19 | Fixed | GitHub Actions CI with app checks and a Postgres job running all migrations and three SQL suites. |
+
+Live database (2026-11-25): migrations through `20261125000100` applied; `20261117000000` recorded as previously hand-applied; `20261117000001_sponsor_logos` (never applied before) applied.

@@ -9,6 +9,7 @@ import {
   ownedSponsorship, readSponsorPrice, sponsorAccount, sponsorAdmin, sponsorCatalogTag, sponsorCheckoutEnabled, stripeRequest,
   syncSponsorCheckout, type Checkout,
 } from "@/lib/sponsor-billing";
+import { logError } from "@/lib/log";
 
 export async function startSponsorCheckout(form: FormData) {
   const user = await sponsorAccount();
@@ -58,7 +59,8 @@ export async function startSponsorCheckout(form: FormData) {
       if (saveError || !saved) throw new Error("Could not save checkout");
       destination = checkout.url;
     }
-  } catch {
+  } catch (error) {
+    logError("sponsor.checkout", error);
     destination = "/advertise?error=checkout";
   }
   redirect(destination);
@@ -114,6 +116,7 @@ export async function publishSponsor(form: FormData) {
     name, headline, website_url: websiteUrl, logo_url: logoUrl,
   }).eq("id", current.id).eq("owner_id", user.id).eq("state", "active").select("id").maybeSingle();
   if (error || !data) {
+    logError("sponsor.publish_card", error ?? "no active sponsorship row updated", { sponsorship: current.id });
     if (uploadedPath) await bucket.remove([uploadedPath]);
     redirect("/advertise?error=publish");
   }
@@ -139,7 +142,8 @@ export async function openSponsorBilling() {
       return_url: `${appOrigin()}/advertise`,
     });
     destination = session.url;
-  } catch {
+  } catch (error) {
+    logError("sponsor.billing_portal", error);
     destination = "/advertise?error=billing";
   }
   redirect(destination);
