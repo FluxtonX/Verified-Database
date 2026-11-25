@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { SponsorOffer } from "@/components/SponsorOffer";
 import { SponsorDetailsForm } from "@/components/SponsorDetailsForm";
-import { createSupabase } from "@/lib/supabase/server";
 import {
   ownedSponsorship, readSponsorCatalog, readSponsorPrice, sponsorAccount, sponsorAdmin, sponsorCheckoutEnabled, stripeRequest,
   syncSponsorCheckout, type Checkout,
@@ -9,7 +8,7 @@ import {
 import { openSponsorBilling, startSponsorCheckout } from "./actions";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 
-export const metadata = { title: "Advertise | VerifedDB" };
+export const metadata = { title: "Advertise | VerifedDB", alternates: { canonical: "/advertise" } };
 
 const errors: Record<string, string> = {
   unavailable: "Sponsorship checkout is currently unavailable.",
@@ -26,7 +25,7 @@ const errors: Record<string, string> = {
 export default async function AdvertisePage({ searchParams }: {
   searchParams: Promise<{ checkout?: string; error?: string }>;
 }) {
-  const [params, supabase, user] = await Promise.all([searchParams, createSupabase(), sponsorAccount()]);
+  const [params, user] = await Promise.all([searchParams, sponsorAccount()]);
   const admin = sponsorAdmin();
   let sponsorship = null;
   let failed = false;
@@ -44,7 +43,7 @@ export default async function AdvertisePage({ searchParams }: {
   }
   const showOffer = !sponsorship && !failed;
   const [catalog, price] = await Promise.all([
-    showOffer ? readSponsorCatalog(supabase) : null,
+    showOffer ? readSponsorCatalog() : null,
     showOffer ? readSponsorPrice() : null,
   ]);
 

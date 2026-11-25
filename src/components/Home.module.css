@@ -143,7 +143,7 @@
 .founder > span:first-child:not(:last-child) { display: grid; place-items: center; background: var(--paper); border: 1px solid var(--line); font-size: 11px; }
 .founder > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mrrCell { text-align: right; font-family: var(--mono); font-weight: 600; white-space: nowrap; }
-.nonrecurring { display: inline-block; margin-left: 4px; vertical-align: middle; color: var(--ink-3); }
+.asOf { display: block; font-family: var(--sans); font-size: 11.5px; font-weight: 400; color: var(--ink-3); }
 .growthCell { text-align: right; white-space: nowrap; }
 .growthUp, .growthDown, .growthFlat { display: inline-block; padding: 2px 8px; border-radius: 7px; font-family: var(--mono); font-size: 12.5px; font-weight: 600; }
 .growthUp { background: var(--accent-soft); color: var(--accent); }

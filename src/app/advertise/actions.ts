@@ -1,12 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { appOrigin } from "@/lib/supabase/config";
 import type { Sponsorship } from "@/lib/sponsorship";
 import { sponsorLogoBucket, sponsorLogoImage, sponsorLogoPath, storedSponsorLogoPath } from "@/lib/sponsor-logo";
 import {
-  ownedSponsorship, readSponsorPrice, sponsorAccount, sponsorAdmin, sponsorCheckoutEnabled, stripeRequest,
+  ownedSponsorship, readSponsorPrice, sponsorAccount, sponsorAdmin, sponsorCatalogTag, sponsorCheckoutEnabled, stripeRequest,
   syncSponsorCheckout, type Checkout,
 } from "@/lib/sponsor-billing";
 
@@ -32,6 +32,7 @@ export async function startSponsorCheckout(form: FormData) {
     const { data, error } = await admin.rpc("reserve_sponsorship", { p_owner: user.id });
     const reservation = data as Sponsorship | null;
     if (error) throw error;
+    updateTag(sponsorCatalogTag); // a reserved slot changes the "spots left" count
     if (!reservation?.id) destination = "/advertise?error=sold-out";
     else if (reservation.state !== "checkout") destination = "/advertise";
     else if (reservation.checkout_session_id) {
@@ -118,6 +119,7 @@ export async function publishSponsor(form: FormData) {
   }
   const previousPath = storedSponsorLogoPath(current.logo_url, process.env.NEXT_PUBLIC_SUPABASE_URL ?? "", current.id);
   if (previousPath && previousPath !== uploadedPath && current.logo_url !== logoUrl) await bucket.remove([previousPath]);
+  updateTag(sponsorCatalogTag); // show the new card immediately
   revalidatePath("/");
   revalidatePath("/acquire");
   redirect(`/?publishedSponsor=${encodeURIComponent(data.id)}`);

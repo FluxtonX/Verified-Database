@@ -1,16 +1,33 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { createSupabase } from "@/lib/supabase/server";
 import { dollars, marketplaceCard, type MarketplaceCardData } from "@/lib/catalog";
 import { buyerUrl, isUuid } from "@/lib/buyer-dashboard";
-import { marketplaceStartups } from "@/data/acquire";
+import { sampleListings } from "@/data/sample";
 import { ListingContact, SaveListingButton } from "@/components/BuyerForms";
 import StartupLogo from "@/components/StartupLogo";
 import { Icon } from "@/components/icons";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 
-export const metadata: Metadata = { title: "Acquisition opportunity | VerifedDB" };
+// Shared by generateMetadata and the page, so the listing is read once per request.
+const readListing = cache(async (id: string) => {
+  const supabase = await createSupabase();
+  return supabase && isUuid(id) ? supabase.from("marketplace_details").select("*").eq("id", id).maybeSingle() : null;
+});
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const row = (await readListing(id))?.data;
+  const listing = row ? marketplaceCard(row) : sampleListings.find(item => item.id === id);
+  if (!listing) return { title: "Listing not found | VerifedDB", robots: { index: false } };
+  const subject = listing.private ? `Confidential ${listing.category} business` : listing.name;
+  const title = `${subject} for sale · ${listing.revenueLabel}/mo revenue | VerifedDB`;
+  const description = `${listing.private ? `A confidential ${listing.category.toLowerCase()} business` : listing.name} is for sale at ${listing.priceLabel}`
+    + ` with ${listing.revenueLabel} revenue in the last 30 days${listing.multiple === null ? "" : ` (${listing.multiple.toFixed(1)}x annual revenue)`}. Message the founder on VerifedDB.`;
+  return { title, description, alternates: { canonical: `/acquire/${id}` }, openGraph: { title, description, type: "website" } };
+}
 type Details = {
   website_url: string | null; product_details: Record<string, unknown>;
   revenue_provider: string; verified_at: string | null; measured_on: string; is_owner: boolean;
@@ -26,16 +43,14 @@ export default async function ListingPage({ params, searchParams }: {
   const destination = `/acquire/${id}${inquiry ? "?intent=inquiry" : ""}`;
   if (supabase) {
     if (!isUuid(id)) notFound();
-    const [listing, session] = await Promise.all([
-      supabase.from("marketplace_details").select("*").eq("id", id).maybeSingle(),
+    const [listingResult, session] = await Promise.all([
+      readListing(id),
       supabase.auth.getClaims(),
     ]);
+    const listing = listingResult!;
     if (listing.error) throw new Error("Couldn’t load this listing. Please try again.");
-    if (!listing.data) {
-      // Guest visibility is restricted by the marketplace projection.
-      const viewer = Boolean(session.data?.claims.sub);
-      return <><SiteHeader signedIn={viewer} current="marketplace" next={destination} /><main className="listing-page"><nav className="listing-nav" aria-label="Listing navigation"><Link className="listing-back" href="/acquire">← Marketplace</Link></nav><div className="seller-card workspace-empty"><Icon name="building" size={28} /><h1>Listing unavailable</h1><p className="muted">It may have sold, been withdrawn, or require a member account.</p><Link className="startup-submit" href={session.data?.claims.sub ? "/acquire" : `/login?next=${encodeURIComponent(destination)}`}>{session.data?.claims.sub ? "Explore other startups" : "Sign in to the marketplace"}</Link></div></main><SiteFooter /></>;
-    }
+    // Sold, withdrawn, or not visible to this viewer: a real 404 (the not-found page offers sign-in and the marketplace).
+    if (!listing.data) notFound();
     startup = marketplaceCard(listing.data);
     details = listing.data as Details;
     const owner = session.data?.claims.sub;
@@ -50,9 +65,9 @@ export default async function ListingPage({ params, searchParams }: {
       saved = Boolean(saveResult.data); ready = Boolean(buyerResult.data); conversation = thread.data?.id;
     }
   } else {
-    const sample = marketplaceStartups.find(item => item.id === id);
+    const sample = sampleListings.find(item => item.id === id);
     if (!sample) notFound();
-    startup = { ...sample, mrr: null, margin: null, foundedOn: null, listedAt: null, country: null, audience: null, mobileApp: null };
+    startup = sample;
   }
   const facts = [
     ["Category", startup.category], ["Audience", startup.audience], ["Product", startup.mobileApp ? "Mobile app" : "Digital business"],

@@ -11,6 +11,7 @@ import { Icon } from "@/components/icons";
 export const metadata: Metadata = {
   title: "Log in | VerifedDB",
   description: "Log in to buy and sell startups. Get deal flow, list your startup, and talk with founders.",
+  robots: { index: false, follow: true },
 };
 
 export default async function LoginPage({ searchParams }: {

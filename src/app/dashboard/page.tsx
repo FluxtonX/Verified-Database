@@ -18,7 +18,7 @@ import { startupDetailsColumns } from "@/lib/startup-details";
 import { providerNames, type PaymentSource } from "@/lib/startup-metrics";
 import { importedLogoUrl, startupLogoBucket, startupLogoPath } from "@/lib/startup-logo";
 
-export const metadata: Metadata = { title: "Dashboard | VerifedDB" };
+export const metadata: Metadata = { title: "Dashboard | VerifedDB", robots: { index: false, follow: false } };
 
 type Draft = StartupDetails & { startup_payment_sources: PaymentSource[]; wants_sale: boolean };
 
