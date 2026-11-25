@@ -438,6 +438,13 @@ export type Database = {
             foreignKeyName: "seller_lead_messages_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
+            referencedRelation: "seller_lead_buyers"
+            referencedColumns: ["lead_id"]
+          },
+          {
+            foreignKeyName: "seller_lead_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
             referencedRelation: "seller_leads"
             referencedColumns: ["id"]
           },
@@ -999,7 +1006,6 @@ export type Database = {
         }
         Relationships: []
       }
-      // Added from migration 20261125000400 ahead of regeneration; `supabase gen types` will overwrite this identically.
       seller_lead_buyers: {
         Row: {
           bio: string | null
